@@ -127,6 +127,8 @@ export interface LinearScaleInput {
   suggestedMax?: number;
   /** The length of the axis in pixels. */
   length: number;
+  /** `true` when the axis runs along the bottom, which `computeTickLimit` reads. */
+  horizontal?: boolean;
   maxTicksLimit?: number;
   /** The line height of a tick label. The DSFR uses 12px × 1.66. */
   lineHeight: number;
@@ -169,7 +171,7 @@ function dataLimits(data: number[][], stacked: boolean): { min: number; max: num
  * `getTickLimit` + `buildTicks`, then `_setMinAndMaxByKey` because `bounds`
  * keeps its default of `'ticks'`.
  */
-export function linearScale({ data, stacked = false, beginAtZero = false, suggestedMin, suggestedMax, length, maxTicksLimit, lineHeight }: LinearScaleInput): LinearScale {
+export function linearScale({ data, stacked = false, beginAtZero = false, suggestedMin, suggestedMax, length, horizontal = false, maxTicksLimit, lineHeight }: LinearScaleInput): LinearScale {
   const limits = dataLimits(data, stacked);
   let min = limits.min;
   let max = limits.max;
@@ -188,9 +190,17 @@ export function linearScale({ data, stacked = false, beginAtZero = false, sugges
     if (!beginAtZero) min = min - offset;
   }
 
-  // `computeTickLimit`, with `minRotation` at 0, so the ratio is 1.
-  const fitting = Math.ceil(length / Math.min(40, lineHeight));
+  // `computeTickLimit` divides the line height by a ratio that is
+  // `cos(minRotation)` on a vertical axis and `sin(minRotation)` on a
+  // horizontal one. With `minRotation` at 0 that ratio is 1 up the side, but
+  // `sin(0)` is 0 along the bottom, where the `|| 0.001` of Chart.js takes
+  // over. `lineHeight / 0.001` is far above 40, so a horizontal axis always
+  // divides by 40 and never by the line height. Do not simplify the two
+  // orientations into one.
+  const ratio = horizontal ? 0.001 : 1;
+  const fitting = Math.ceil(length / Math.min(40, lineHeight / ratio));
   const maxTicks = Math.max(2, Math.min(maxTicksLimit ?? 11, fitting));
+  // `_maxDigits` carries no ratio: it is the line height on both orientations.
   const maxDigits = length / lineHeight;
   const ticks = generateTicks({ maxTicks, maxDigits }, { min, max });
 

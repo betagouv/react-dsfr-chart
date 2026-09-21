@@ -170,9 +170,9 @@ the new measurement in the message.
 | --------------------- | ------- |
 | `PieChart`            | 3.6 kB  |
 | `BarChart`            | 6.9 kB  |
-| `LineChart`           | 5.9 kB  |
-| The three together    | 9.3 kB  |
-| Stylesheet            | 1.9 kB  |
+| `LineChart`           | 6 kB    |
+| The three together    | 9.5 kB  |
+| Stylesheet            | 2.05 kB |
 | Runtime deps          | 0       |
 
 The three together weigh less than any two apart: `core/` is shared, never
@@ -187,9 +187,12 @@ duplicated per entry point.
   clamps it.
 - **Scales** (`tests/scale.test.ts`): the ticks, the minimum and the maximum of
   a linear axis against Chart.js, over four sizes and sixteen data shapes.
-- **Layout** (`tests/layout.test.ts`): the plot box against Chart.js. It is
-  equal to the pixel whenever the labels do not rotate; when they do, the
-  tolerance is 3 degrees and 4 pixels — see the deviation below.
+- **Layout** (`tests/layout.test.ts`): the plot box against Chart.js, over four
+  sizes. The angle of a rotated label is exact, to a billionth of a degree. The
+  box is equal to the pixel in 28 of the 30 cases; the two that are not are
+  both 400x200 and move by 0.67 of a pixel at worst, which is why the two
+  tolerances are `1e-9` degrees and 0.7 pixels. Tighten them if a change makes
+  the last two exact; never loosen them to make a change pass.
 - **Bars** (`tests/bars.test.ts`): the width and the centre of every bar against
   Chart.js, flexible and fixed, grouped and stacked, both orientations.
 - **Spline** (`tests/spline.test.ts`): the Bézier control points of the curve
@@ -202,14 +205,23 @@ duplicated per entry point.
 - **Components**: render, prop change redraws, unmount disconnects the
   `ResizeObserver`, data table content, tooltip on hover and on focus, legend
   defaults.
-- **Visual** (`visual/{pie,bar,line}.spec.ts`): same data, both libraries, fixed
-  viewport, `deviceScaleFactor: 1`. The pie holds a 0.5 % tolerance and measures
-  0.01 %, because its text lives in the DOM, not in the drawing. The bar and the
-  line put their axis labels inside the SVG, which a canvas never rasterises the
-  same way, so each case carries the share measured today and the test allows
-  one percentage point above it: 0.9 % to 12.7 % for the bar, 1.1 % to 6.5 % for
-  the line. A self-check compares a doughnut with a pie and requires the harness
-  to report a difference — a result of 0.00 % proves nothing otherwise.
+- **Visual** (`visual/{pie,bar,line}.spec.ts`, over the shared `visual/parity.ts`):
+  same data, both libraries, fixed viewport, `deviceScaleFactor: 1`. A case
+  states how far it may differ in one of two ways, never both. The pie carries
+  a flat `tolerance` of 0.5 % and measures 0.01 %, because its text lives in
+  the DOM, not in the drawing. The bar and the line put their axis labels
+  inside the SVG, which a canvas never rasterises the same way, so each case
+  carries the `measured` share of today and the test allows one percentage
+  point above it: 0.9 % to 12.6 % for the bar, 1.0 % to 6.5 % for the line.
+  Those two ends are not geometry — see the header of `visual/bar.spec.ts`. A
+  self-check compares a doughnut with a pie and requires the harness to report
+  a difference — a result of 0.00 % proves nothing otherwise.
+
+  The screenshot is the coarse oracle. A large bar body of a value-based
+  palette and a turned glyph both differ for reasons no geometry fix removes,
+  so a number that moves by a point means little on its own. The unit tests are
+  the precise oracle: take `tests/{layout,scale,bars,spline,arc}.test.ts` as
+  the answer when the two disagree.
 
 ## Intentional deviations from `@gouvfr/dsfr-chart`
 
@@ -230,18 +242,28 @@ Don't "fix" these back:
   bar, `brighten(0.5)` for line. Keep the asymmetry.
 - **Value-based palettes interpolate in CSS**, so the hover colour of a scaled
   slice is an approximation of the upstream's. Accepted.
-- **A rotated category label turns a few degrees more than in Chart.js.**
-  Chart.js settles the angle through a negotiation between its layout boxes
-  over several passes, which this port does not reproduce. The plot box is
-  equal to the pixel when nothing rotates. When a label does rotate, the angle
-  is up to 3 degrees steeper, the box moves by up to 4 pixels, and the value
-  axis can end up with fewer ticks because a shorter plot holds fewer of them.
 - **A tick label on a value axis is formatted in French** (`fr-FR`), where
   Chart.js follows the locale of the page. The upstream already formats its
   tooltip in French, so this makes the two agree.
 - **The line chart drops `vline`, `hline` and their colour and name
   attributes.** The upstream marks them undocumented and not meant to be used,
   and comments them out of its own examples.
+- **The hover guide lines carry a colour.** The upstream sets their
+  `strokeStyle` to `colorPrecisionBar`, a property it never assigns, so the
+  canvas keeps whatever colour it last held. This port paints them with
+  `--rdc-axis-line`.
+- **A numeric index axis needs every label to read as a number.** The upstream
+  tests `parseFloat(labels[0]) == labels[0]`, so it reads the first label only,
+  and loosely: `'01'` gives it a linear axis. This port asks every label to be
+  a finite number written in its plain form, which sends `'01'` to a category
+  axis. A list that starts with a number and continues with text then draws,
+  where the upstream would place a point at `NaN`.
+- **A turned category label sits on its hanging baseline.** Chart.js draws it
+  with the canvas baseline `middle`, half a line height along the turned axis.
+  The SVG equivalents of that baseline, `middle` and `central`, both measure
+  worse against the upstream drawing than `hanging` does — by 0.3 and 0.4 of a
+  percentage point on `bar-sequential-light`. The angle itself is exact:
+  `tests/layout.test.ts` holds it to a billionth of a degree.
 
 ## Commits
 

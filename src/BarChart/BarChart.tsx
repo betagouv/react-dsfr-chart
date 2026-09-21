@@ -81,9 +81,10 @@ export function BarChart({
   const [active, setActive] = useState<number | null>(null);
 
   const hasSubChart = Boolean(subX && subY);
-  const labels = level === null ? x : (subX?.[level] ?? x);
+  const labels = useMemo(() => (level === null ? x : (subX?.[level] ?? x)), [level, x, subX]);
   // A second level replaces the data of the first series only, as upstream does.
-  const series = level === null ? y : [subY?.[level] ?? []];
+  // Memoised because a fresh array on every render would redraw the whole chart.
+  const series = useMemo(() => (level === null ? y : [subY?.[level] ?? []]), [level, y, subY]);
 
   const { colors, hovers, legendColors } = useMemo(() => {
     const { colorParse, colorHover, legendColors } = generateColors({ yparse: series, highlightIndex, selectedPalette });
@@ -194,7 +195,7 @@ export function BarChart({
             area={geometry.area}
             bottom={
               horizontal
-                ? geometry.value.ticks.map((tick, index) => ({ position: geometry.valuePixel(tick), label: geometry.valueLabels[index] }))
+                ? geometry.visible.map((index) => ({ position: geometry.valuePixel(geometry.value.ticks[index]), label: geometry.valueLabels[index] })).filter((tick) => Number.isFinite(tick.position))
                 : geometry.visible.map((index) => ({ position: geometry.centres[index], label: labels[index] }))
             }
             left={

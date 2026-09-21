@@ -23,6 +23,9 @@ export interface PlotInput {
   beginAtZero: boolean;
   suggestedMin?: number;
   suggestedMax?: number;
+  /** The same hint for the index axis, which only a linear one reads. */
+  indexSuggestedMin?: number;
+  indexSuggestedMax?: number;
   maxTicksLimit?: number;
   /** How a value becomes the text of a tick. */
   formatValue: (value: number, ticks: number[]) => string;
@@ -57,23 +60,27 @@ export interface Plot {
 }
 
 export function plot(input: PlotInput): Plot | null {
-  const { width, height, labels, series, stacked, horizontal, beginAtZero, suggestedMin, suggestedMax, maxTicksLimit, formatValue, bottomPadding, leftPadding, indexValues } = input;
+  const { width, height, labels, series, stacked, horizontal, beginAtZero, suggestedMin, suggestedMax, indexSuggestedMin, indexSuggestedMax, maxTicksLimit, formatValue, bottomPadding, leftPadding, indexValues } = input;
   if (width <= 0 || height <= 0) return null;
 
   // The value axis runs up the side of a vertical chart and along the bottom
   // of a horizontal one.
   let valueLength = horizontal ? width : height;
   let indexLength = horizontal ? height : width;
-  let value = linearScale({ data: series, stacked, beginAtZero, suggestedMin, suggestedMax, length: valueLength, lineHeight: LINE_HEIGHT, maxTicksLimit });
+  let value = linearScale({ data: series, stacked, beginAtZero, suggestedMin, suggestedMax, length: valueLength, horizontal, lineHeight: LINE_HEIGHT, maxTicksLimit });
   let valueLabels = value.ticks.map((tick) => formatValue(tick, value.ticks));
   // A linear index axis labels its round values, not every point of the data.
-  let indexScale = indexValues ? linearScale({ data: [indexValues], length: indexLength, lineHeight: LINE_HEIGHT }) : null;
+  // It faces the value axis, so it is horizontal exactly when the chart is not.
+  let indexScale = indexValues ? linearScale({ data: [indexValues], suggestedMin: indexSuggestedMin, suggestedMax: indexSuggestedMax, length: indexLength, horizontal: !horizontal, lineHeight: LINE_HEIGHT }) : null;
   let indexLabels = indexScale ? indexScale.ticks.map(String) : labels;
   let fitted: Layout | null = null;
 
   for (let pass = 0; pass < 2; pass++) {
     const valueAxis: AxisOptions = { labels: valueLabels, padding: horizontal ? bottomPadding : leftPadding, offset: false, autoSkip: horizontal };
-    const indexAxis: AxisOptions = { labels: indexLabels, padding: horizontal ? leftPadding : bottomPadding, offset: !indexScale, autoSkip: !horizontal };
+    // The upstream puts `offset` on the index axis whichever type it carries:
+    // `x.offset = !horizontal` in BarChart.vue, `x: { offset: true }` in
+    // LineChart.vue, category or linear alike.
+    const indexAxis: AxisOptions = { labels: indexLabels, padding: horizontal ? leftPadding : bottomPadding, offset: true, autoSkip: !horizontal };
 
     fitted = layout({
       width,
@@ -85,10 +92,10 @@ export function plot(input: PlotInput): Plot | null {
 
     valueLength = horizontal ? fitted.area.right - fitted.area.left : fitted.area.bottom - fitted.area.top;
     indexLength = horizontal ? fitted.area.bottom - fitted.area.top : fitted.area.right - fitted.area.left;
-    value = linearScale({ data: series, stacked, beginAtZero, suggestedMin, suggestedMax, length: valueLength, lineHeight: LINE_HEIGHT, maxTicksLimit });
+    value = linearScale({ data: series, stacked, beginAtZero, suggestedMin, suggestedMax, length: valueLength, horizontal, lineHeight: LINE_HEIGHT, maxTicksLimit });
     valueLabels = value.ticks.map((tick) => formatValue(tick, value.ticks));
     if (indexValues) {
-      indexScale = linearScale({ data: [indexValues], length: indexLength, lineHeight: LINE_HEIGHT });
+      indexScale = linearScale({ data: [indexValues], suggestedMin: indexSuggestedMin, suggestedMax: indexSuggestedMax, length: indexLength, horizontal: !horizontal, lineHeight: LINE_HEIGHT });
       indexLabels = indexScale.ticks.map(String);
     }
   }

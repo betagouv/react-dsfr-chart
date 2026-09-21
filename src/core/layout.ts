@@ -54,7 +54,7 @@ function labelRotation(axis: AxisOptions, widest: number, chartWidth: number, ma
   let tickWidth = axis.offset ? maxWidth / count : available / (count - 1);
   if (widest + 6 <= tickWidth) return 0;
 
-  tickWidth = available / (count - (axis.offset ? 0 : 1));
+  tickWidth = available / (count - (axis.offset ? 0.5 : 1));
   // `maxHeight - tickMarkLength - padding - titleHeight`, with no tick mark
   // and no title.
   const room = maxHeight - axis.padding;

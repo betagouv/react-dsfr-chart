@@ -99,6 +99,10 @@ export function LineChart({
       maxTicksLimit: MAX_VALUE_TICKS,
       formatValue: (value) => formatShortTick(value),
       indexValues,
+      // `suggestedMin` / `suggestedMax` of the `x` scale of the upstream. Only
+      // a linear index axis reads them; a category axis has no numeric bounds.
+      indexSuggestedMin: xMin,
+      indexSuggestedMax: xMax,
       bottomPadding: INDEX_PADDING,
       leftPadding: VALUE_PADDING,
     });
@@ -112,7 +116,7 @@ export function LineChart({
       areas: fill ? points.map((set) => areaPath(set, fitted.area, fitted.area.bottom)) : [],
     };
     // `fonts` is not read: it redraws once the real font is measurable.
-  }, [width, height, labels, y, indexValues, fill, yMin, yMax, fonts]);
+  }, [width, height, labels, y, indexValues, fill, xMin, xMax, yMin, yMax, fonts]);
 
   const legend = useMemo(() => y.map((_, index) => ({ label: name?.[index] ?? `Série ${index + 1}`, color: colors[index] ?? 'var(--rdc-neutral)' })), [y, name, colors]);
 
@@ -156,7 +160,7 @@ export function LineChart({
         <svg width={width} height={height} role="img" aria-label={ariaLabel} onMouseLeave={() => setActive(null)}>
           <Axes
             area={geometry.area}
-            bottom={geometry.indexTicks}
+            bottom={geometry.visible.map((index) => geometry.indexTicks[index]).filter(Boolean)}
             left={geometry.value.ticks.map((tick, index) => ({ position: geometry.valuePixel(tick), label: geometry.valueLabels[index] }))}
             bottomPadding={INDEX_PADDING}
             leftPadding={VALUE_PADDING}
@@ -167,7 +171,17 @@ export function LineChart({
           {geometry.areas.map((path, s) => (path ? <path key={`a${s}`} className="rdc-area" d={path} fill={colors[s]} /> : null))}
           {geometry.lines.map((path, s) => (path ? <path key={`l${s}`} className="rdc-line" d={path} stroke={colors[s]} /> : null))}
 
-          {active !== null ? <line className="rdc-crosshair" x1={geometry.points[0]?.[active]?.x ?? 0} x2={geometry.points[0]?.[active]?.x ?? 0} y1={geometry.area.top} y2={geometry.area.bottom} /> : null}
+          {/* The `afterDraw` plugin of src/components/LineChart.vue: one dashed line down the category, and one across the plot at the value of every series. */}
+          {active !== null ? (
+            <>
+              <line className="rdc-crosshair" x1={geometry.points[0]?.[active]?.x ?? 0} x2={geometry.points[0]?.[active]?.x ?? 0} y1={geometry.area.top} y2={geometry.area.bottom} />
+              {geometry.points.map((set, s) => {
+                const point = set[active];
+                if (!point || !Number.isFinite(y[s]?.[active])) return null;
+                return <line key={`c${s}`} className="rdc-crosshair" x1={geometry.area.left} x2={geometry.area.right} y1={point.y} y2={point.y} />;
+              })}
+            </>
+          ) : null}
 
           {geometry.points.map((set, s) =>
             set.map((point, index) => (

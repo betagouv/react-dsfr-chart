@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { BarChart } from '../src/BarChart/index.js';
 import { LineChart } from '../src/LineChart/index.js';
 
 const X = [2001, 2002, 2003, 2004];
@@ -10,6 +11,7 @@ const lines = (container: HTMLElement): SVGPathElement[] => Array.from(container
 const areas = (container: HTMLElement): SVGPathElement[] => Array.from(container.querySelectorAll('path.rdc-area'));
 const points = (container: HTMLElement): SVGCircleElement[] => Array.from(container.querySelectorAll('circle.rdc-point'));
 const ticks = (container: HTMLElement): string[] => Array.from(container.querySelectorAll('text.rdc-tick')).map((node) => node.textContent ?? '');
+const crosshairs = (container: HTMLElement): SVGLineElement[] => Array.from(container.querySelectorAll('line.rdc-crosshair'));
 
 describe('LineChart', () => {
   it('draws one line per series, at the measured size', () => {
@@ -66,6 +68,34 @@ describe('LineChart', () => {
     expect(cx[1] - cx[0]).toBeCloseTo(cx[2] - cx[1], 6);
   });
 
+  it('widens a linear index axis to take a suggested minimum in', () => {
+    const before = render(<LineChart x={[2000, 2001, 2002]} y={[[1, 2, 3]]} />);
+    const gap = (container: HTMLElement) => {
+      const cx = points(container).map((point) => Number(point.getAttribute('cx')));
+      return cx[1] - cx[0];
+    };
+    const after = render(<LineChart x={[2000, 2001, 2002]} y={[[1, 2, 3]]} xMin={1990} />);
+    // A wider range over the same plot puts the same three years closer together.
+    expect(gap(after.container)).toBeLessThan(gap(before.container));
+  });
+
+  it('leaves a category index axis alone, which reads no numeric bound', () => {
+    const before = render(<LineChart x={['un', 'deux', 'trois']} y={[[1, 2, 3]]} />);
+    const after = render(<LineChart x={['un', 'deux', 'trois']} y={[[1, 2, 3]]} xMin={0} xMax={100} />);
+    const cx = (container: HTMLElement) => points(container).map((point) => Number(point.getAttribute('cx')));
+    expect(cx(after.container)).toEqual(cx(before.container));
+  });
+
+  it('skips the category labels that do not fit, as the bar chart does', () => {
+    const many = Array.from({ length: 40 }, (_, index) => `catégorie ${index + 1}`);
+    const values = [many.map((_, index) => index + 1)];
+    const line = render(<LineChart x={many} y={values} />);
+    const bar = render(<BarChart x={many} y={values} />);
+    const drawn = (container: HTMLElement) => ticks(container).filter((label) => many.includes(label)).length;
+    expect(drawn(line.container)).toBeLessThan(many.length);
+    expect(drawn(line.container)).toBe(drawn(bar.container));
+  });
+
   it('names the legend entries "Série n" when no name is given', () => {
     render(<LineChart x={X} y={[[1, 2, 3, 4], [4, 3, 2, 1]]} />);
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Série 1', 'Série 2']);
@@ -93,6 +123,30 @@ describe('LineChart', () => {
     expect(tooltip).toHaveTextContent('2 %');
     expect(tooltip).toHaveTextContent('3 %');
     expect(container.querySelector('line.rdc-crosshair')).toBeInTheDocument();
+  });
+
+  it('guides the eye down the category and across every series on hover', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<LineChart x={X} y={[[1, 2, 3, 4], [4, 3, 2, 1]]} />);
+    await user.hover(points(container)[1]);
+
+    const all = crosshairs(container);
+    const vertical = all.filter((line) => line.getAttribute('x1') === line.getAttribute('x2'));
+    const horizontal = all.filter((line) => line.getAttribute('y1') === line.getAttribute('y2'));
+    expect(vertical).toHaveLength(1);
+    expect(horizontal).toHaveLength(2);
+    // Each one sits at the point of its own series.
+    const cy = points(container)
+      .filter((_, index) => index % 4 === 1)
+      .map((point) => point.getAttribute('cy'));
+    expect(horizontal.map((line) => line.getAttribute('y1'))).toEqual(cy);
+  });
+
+  it('draws no guide line across a series that has no value there', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<LineChart x={X} y={[[1, 2, 3, 4], [4, Number.NaN, 2, 1]]} />);
+    await user.hover(points(container)[1]);
+    expect(crosshairs(container).filter((line) => line.getAttribute('y1') === line.getAttribute('y2'))).toHaveLength(1);
   });
 
   it('opens the tooltip on focus', () => {

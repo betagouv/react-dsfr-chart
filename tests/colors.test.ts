@@ -52,6 +52,7 @@ describe('the generated colours match chroma-js', () => {
       stops.forEach((hex, i) => {
         expect(generated[theme][`--rdc-seq-${i}`]).toBe(hex);
         expect(generated[theme][`--rdc-seq-${i}-dk`]).toBe(chroma(hex).darken(0.8).hex());
+        expect(generated[theme][`--rdc-seq-${i}-br`]).toBe(chroma(hex).brighten(0.5).hex());
       });
     });
 
@@ -60,6 +61,7 @@ describe('the generated colours match chroma-js', () => {
       stops.forEach((hex, i) => {
         expect(generated[theme][`--rdc-div-${i}`]).toBe(hex);
         expect(generated[theme][`--rdc-div-${i}-dk`]).toBe(chroma(hex).darken(0.8).hex());
+        expect(generated[theme][`--rdc-div-${i}-br`]).toBe(chroma(hex).brighten(0.5).hex());
       });
     });
 

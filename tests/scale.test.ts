@@ -24,9 +24,16 @@ interface Options {
   suggestedMin?: number;
   suggestedMax?: number;
   maxTicksLimit?: number;
+  /** `true` lays the categories up the left side and the values along the bottom. */
+  horizontal?: boolean;
 }
 
-/** Builds the chart @gouvfr/dsfr-chart builds, and reads the ticks back. */
+/**
+ * Builds the chart @gouvfr/dsfr-chart builds, and reads the ticks back. The
+ * option bag follows the axis name, not the role, exactly as
+ * src/components/{Bar,Line}Chart.vue writes it: a horizontal bar chart carries
+ * its values on `x` and its categories on `y`, and the two bags swap with it.
+ */
 function reference(type: 'bar' | 'line', data: number[][], width: number, height: number, options: Options = {}) {
   const canvas = document.createElement('canvas');
   Object.defineProperty(canvas, 'getBoundingClientRect', {
@@ -35,6 +42,13 @@ function reference(type: 'bar' | 'line', data: number[][], width: number, height
   });
   document.body.appendChild(canvas);
 
+  const horizontal = Boolean(options.horizontal);
+  // The bounds belong to the value axis, wherever it runs.
+  const valueBounds = {
+    ...(options.suggestedMin !== undefined ? { suggestedMin: options.suggestedMin } : {}),
+    ...(options.suggestedMax !== undefined ? { suggestedMax: options.suggestedMax } : {}),
+  };
+
   const chart = new Chart(canvas, {
     type,
     data: {
@@ -42,25 +56,43 @@ function reference(type: 'bar' | 'line', data: number[][], width: number, height
       datasets: data.map((values) => ({ data: values, fill: false, pointRadius: 5, borderWidth: 2, tension: 0.4 })),
     },
     options: {
+      indexAxis: horizontal ? 'y' : 'x',
       responsive: false,
       animation: false,
       aspectRatio: 2,
       scales: {
-        x: {
-          offset: type === 'bar',
-          stacked: options.stacked,
-          grid: { drawTicks: false, drawOnChartArea: false },
-          ticks: { padding: type === 'bar' ? 15 : 10 },
-        },
-        y: {
-          stacked: options.stacked,
-          offset: false,
-          grid: { drawTicks: false },
-          border: { dash: [3] },
-          ticks: { autoSkip: false, padding: 5, ...(options.maxTicksLimit ? { maxTicksLimit: options.maxTicksLimit } : {}) },
-          ...(options.suggestedMin !== undefined ? { suggestedMin: options.suggestedMin } : {}),
-          ...(options.suggestedMax !== undefined ? { suggestedMax: options.suggestedMax } : {}),
-        },
+        x: horizontal
+          ? {
+              offset: false,
+              stacked: options.stacked,
+              grid: { drawTicks: false, drawOnChartArea: true },
+              // The upstream leaves `autoSkip` on here; it drops no tick at
+              // these sizes, so the axis still reports what `buildTicks` made.
+              ticks: { padding: 5, ...(options.maxTicksLimit ? { maxTicksLimit: options.maxTicksLimit } : {}) },
+              ...valueBounds,
+            }
+          : {
+              offset: type === 'bar',
+              stacked: options.stacked,
+              grid: { drawTicks: false, drawOnChartArea: false },
+              ticks: { padding: type === 'bar' ? 15 : 10 },
+            },
+        y: horizontal
+          ? {
+              offset: true,
+              stacked: options.stacked,
+              grid: { drawTicks: false, drawOnChartArea: false },
+              border: { dash: [3] },
+              ticks: { autoSkip: false, padding: 5 },
+            }
+          : {
+              stacked: options.stacked,
+              offset: false,
+              grid: { drawTicks: false },
+              border: { dash: [3] },
+              ticks: { autoSkip: false, padding: 5, ...(options.maxTicksLimit ? { maxTicksLimit: options.maxTicksLimit } : {}) },
+              ...valueBounds,
+            },
       },
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
     },
@@ -68,13 +100,13 @@ function reference(type: 'bar' | 'line', data: number[][], width: number, height
   chart.resize(width, height);
   chart.update('none');
 
-  const y = chart.scales.y;
+  const value = horizontal ? chart.scales.x : chart.scales.y;
   const result = {
-    ticks: y.ticks.map((tick) => tick.value),
-    min: y.min,
-    max: y.max,
+    ticks: value.ticks.map((tick) => tick.value),
+    min: value.min,
+    max: value.max,
     // The length Chart.js gave the axis, which decides how many ticks fit.
-    length: (y as unknown as { _length: number })._length,
+    length: (value as unknown as { _length: number })._length,
   };
   chart.destroy();
   canvas.remove();
@@ -118,6 +150,7 @@ const SERIES: { name: string; data: number[][]; options?: Options; barOnly?: boo
   { name: 'a suggested maximum', data: [[3, 5, 4]], options: { suggestedMax: 100 } },
   { name: 'a suggested minimum', data: [[30, 50, 40]], options: { suggestedMin: -20 } },
   { name: 'five ticks at most', data: [[51.5, 114.6, 92.6]], options: { maxTicksLimit: 5 } },
+  { name: 'four counts', data: [[12, 47, 93, 61]] },
 ];
 
 const SIZES: [number, number][] = [
@@ -151,6 +184,45 @@ describe('the linear scale matches Chart.js', () => {
           expect(ours.max).toBeCloseTo(expected.max, 9);
         });
       }
+    }
+  }
+});
+
+/**
+ * A horizontal bar chart puts its value axis along the bottom, where
+ * `computeTickLimit` divides by 40 instead of by the line height. The narrow
+ * sizes are the band where the two rules part: a value axis of 364 pixels holds
+ * six ticks under the horizontal rule and eleven under the vertical one.
+ */
+const HORIZONTAL_SIZES: [number, number][] = [
+  [800, 400],
+  [600, 300],
+  [400, 200],
+  [300, 150],
+];
+
+describe('the linear scale of a horizontal bar chart matches Chart.js', () => {
+  for (const [width, height] of HORIZONTAL_SIZES) {
+    for (const { name, data, options } of SERIES) {
+      it(`${width}x${height}: ${name}`, () => {
+        const expected = reference('bar', data, width, height, { ...options, horizontal: true });
+        const ours = linearScale({
+          data,
+          stacked: options?.stacked,
+          // Chart.js gives a bar chart `beginAtZero` through its overrides.
+          beginAtZero: true,
+          suggestedMin: options?.suggestedMin,
+          suggestedMax: options?.suggestedMax,
+          maxTicksLimit: options?.maxTicksLimit,
+          length: expected.length,
+          horizontal: true,
+          lineHeight: LINE_HEIGHT,
+        });
+
+        expect(ours.ticks).toEqual(expected.ticks);
+        expect(ours.min).toBeCloseTo(expected.min, 9);
+        expect(ours.max).toBeCloseTo(expected.max, 9);
+      });
     }
   }
 });

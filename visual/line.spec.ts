@@ -9,12 +9,12 @@ import { measure, report, type ParityCase } from './parity.js';
  */
 
 const CASES: ParityCase[] = [
-  { name: 'line-single-light', measured: 0.0318, chart: 'lineDefault', theme: 'light' },
-  { name: 'line-single-dark', measured: 0.0542, chart: 'lineDefault', theme: 'dark' },
-  { name: 'line-multiple-light', measured: 0.0399, chart: 'lineMultiple', theme: 'light' },
-  { name: 'line-multiple-dark', measured: 0.0653, chart: 'lineMultiple', theme: 'dark' },
-  { name: 'line-sequential-light', measured: 0.0105, chart: 'lineDefault', theme: 'light', palette: 'sequentialAscending' },
-  { name: 'line-neutral-dark', measured: 0.0646, chart: 'lineMultiple', theme: 'dark', palette: 'neutral' },
+  { name: 'line-single-light', measured: 0.0304, chart: 'lineDefault', theme: 'light' },
+  { name: 'line-single-dark', measured: 0.0536, chart: 'lineDefault', theme: 'dark' },
+  { name: 'line-multiple-light', measured: 0.0397, chart: 'lineMultiple', theme: 'light' },
+  { name: 'line-multiple-dark', measured: 0.0652, chart: 'lineMultiple', theme: 'dark' },
+  { name: 'line-sequential-light', measured: 0.0103, chart: 'lineDefault', theme: 'light', palette: 'sequentialAscending' },
+  { name: 'line-neutral-dark', measured: 0.0645, chart: 'lineMultiple', theme: 'dark', palette: 'neutral' },
 ];
 
 const measured: { name: string; ratio: number }[] = [];

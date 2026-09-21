@@ -72,13 +72,17 @@ for (const theme of THEMES) {
     // The line chart brightens on hover where the pie and the bar darken.
     vars[`--rdc-${name}-br`] = brighten(hex);
   }
+  // Both scales carry the two hover variants: the pie and the bar darken a stop,
+  // the line chart brightens it, and `choosePalette` hands them the same names.
   sequential(theme).forEach((hex, i) => {
     vars[`--rdc-seq-${i}`] = hex;
     vars[`--rdc-seq-${i}-dk`] = darken(hex);
+    vars[`--rdc-seq-${i}-br`] = brighten(hex);
   });
   divergent(theme).forEach((hex, i) => {
     vars[`--rdc-div-${i}`] = hex;
     vars[`--rdc-div-${i}-dk`] = darken(hex);
+    vars[`--rdc-div-${i}-br`] = brighten(hex);
   });
   values[theme] = vars;
 }

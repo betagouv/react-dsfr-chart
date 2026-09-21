@@ -1,7 +1,15 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { BarChart } from '../src/BarChart/index.js';
+import { plot } from '../src/core/plot.js';
+
+// `plot` carries the whole of the layout work. Counting its calls tells a
+// render that rebuilt the chart from one that reused what it already had.
+vi.mock('../src/core/plot.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/core/plot.js')>();
+  return { ...actual, plot: vi.fn(actual.plot) };
+});
 
 const X = ['2000', '2010', '2020'];
 const Y = [[11.1, 10.5, 8.4]];
@@ -43,6 +51,16 @@ describe('BarChart', () => {
   it('takes a suggested maximum into account', () => {
     const { container } = render(<BarChart x={X} y={[[1, 2, 3]]} yMax={100} />);
     expect(ticks(container)).toContain('100');
+  });
+
+  it('drops the value labels that do not fit along the bottom of a horizontal chart', () => {
+    const regions = ['Nouvelle-Aquitaine', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d’Azur'];
+    // A short and wide plot: eleven labels of a billion each do not fit along it.
+    const { container } = render(<BarChart x={regions} y={[[2e9, 6e9, 1e10]]} horizontal aspectRatio={8} />);
+    const drawn = ticks(container)
+      .filter((label) => !regions.includes(label))
+      .map((label) => Number(label.replace(/\D/g, '')));
+    expect(drawn).toEqual([0, 2e9, 4e9, 6e9, 8e9, 1e10]);
   });
 
   it('lays the categories up the left side when horizontal', () => {
@@ -146,6 +164,16 @@ describe('BarChart with a second level', () => {
     act(() => bars(container)[0].focus());
     await user.keyboard('{Enter}');
     expect(screen.getByRole('button', { name: 'Retour' })).toBeInTheDocument();
+  });
+
+  it('draws the second level again only when something changes', async () => {
+    const user = userEvent.setup();
+    const { container, rerender } = render(<BarChart x={X} y={Y} subX={subX} subY={subY} />);
+    await user.click(bars(container)[0]);
+
+    vi.mocked(plot).mockClear();
+    rerender(<BarChart x={X} y={Y} subX={subX} subY={subY} />);
+    expect(plot).not.toHaveBeenCalled();
   });
 
   it('ignores a category that has no second level', async () => {

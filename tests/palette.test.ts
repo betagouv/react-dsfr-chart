@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import chroma from 'chroma-js';
 import source from '../scripts/dsfr-colors.json' with { type: 'json' };
@@ -105,6 +107,50 @@ describe('generateColors', () => {
         // interpolates, so a channel may differ by one unit.
         ours.forEach((channel, i) => expect(Math.abs(channel - theirs[i])).toBeLessThanOrEqual(1));
       });
+    });
+  }
+});
+
+/**
+ * Every value of the `Palette` union, as a record: adding a palette without
+ * adding it here fails the typecheck, so the guard below cannot fall behind.
+ */
+const PALETTES: Record<Palette, true> = {
+  default: true,
+  neutral: true,
+  categorical: true,
+  sequentialAscending: true,
+  sequentialDescending: true,
+  divergentAscending: true,
+  divergentDescending: true,
+};
+
+/** The hover suffixes the charts append: `-dk` for the pie and the bar, `-br` for the line. */
+const HOVER_SUFFIXES = ['-dk', '-br'];
+
+/** The custom properties the generated stylesheet declares, one set per theme block. */
+function declaredProperties(): { light: Set<string>; dark: Set<string> } {
+  const css = readFileSync(join(process.cwd(), 'src/styles/colors.generated.css'), 'utf8');
+  const declared = { light: new Set<string>(), dark: new Set<string>() };
+  for (const [, selector, body] of css.matchAll(/(:root|\[data-fr-theme="dark"\])\s*\{([^}]*)\}/g)) {
+    const theme = selector === ':root' ? 'light' : 'dark';
+    for (const [, name] of body.matchAll(/(--[\w-]+):/g)) declared[theme].add(name);
+  }
+  return declared;
+}
+
+describe('the stylesheet defines every custom property a palette can name', () => {
+  const declared = declaredProperties();
+  const palettes = [...(Object.keys(PALETTES) as Palette[]), '', undefined] as const;
+
+  for (const palette of palettes) {
+    it(`declares the colours of the "${palette ?? 'undefined'}" palette and their hover variants, in both themes`, () => {
+      const names = choosePalette(palette).flatMap((name) => [name, ...HOVER_SUFFIXES.map((suffix) => `${name}${suffix}`)]);
+      expect(names.length).toBeGreaterThan(0);
+      for (const name of names) {
+        expect(declared.light, `${name} is missing from the light theme`).toContain(name);
+        expect(declared.dark, `${name} is missing from the dark theme`).toContain(name);
+      }
     });
   }
 });

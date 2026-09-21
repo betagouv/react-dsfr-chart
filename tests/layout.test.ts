@@ -90,9 +90,15 @@ const CASES: Case[] = [
   { name: 'horizontal', labels: ['2000', '2010', '2020'], data: [[11.1, 10.5, 8.4], [8.8, 7.5, 5.6]], horizontal: true },
 ];
 
-/** The measured worst case is 2.55 degrees and 3.66 pixels. */
-const ROTATION_TOLERANCE = 3;
-const BOX_TOLERANCE = 4;
+/**
+ * Of the thirty cases, twenty-four rotate nothing and match to the pixel. Of
+ * the six that rotate, four match to the pixel as well: the angle differs by at
+ * most 3.6e-15 degrees, which is the rounding of a float and nothing else. The
+ * two that drift are 400x200, by 0.67 pixels on the left and 0.47 pixels at the
+ * bottom.
+ */
+const ROTATION_TOLERANCE = 1e-9;
+const BOX_TOLERANCE = 0.7;
 
 const SIZES: [number, number][] = [
   [800, 400],
@@ -142,10 +148,10 @@ describe('the plot box matches Chart.js', () => {
           return;
         }
 
-        // Chart.js settles the angle of a rotated label over two negotiating
-        // passes that this port does not reproduce. The measured difference
-        // stays under 3 degrees and under 4 pixels on the plot box; see the
-        // deviation recorded in CLAUDE.md.
+        // The angle is the one Chart.js computes. Chart.js then settles the
+        // plot box over negotiating passes that this port does not reproduce,
+        // so a rotated case can still move the box by a fraction of a pixel;
+        // see the deviation recorded in CLAUDE.md.
         expect(Math.abs(ours.labelRotation - expected.labelRotation)).toBeLessThanOrEqual(ROTATION_TOLERANCE);
         expect(Math.abs(ours.area.left - expected.area.left)).toBeLessThanOrEqual(BOX_TOLERANCE);
         expect(Math.abs(ours.area.top - expected.area.top)).toBeLessThanOrEqual(BOX_TOLERANCE);
