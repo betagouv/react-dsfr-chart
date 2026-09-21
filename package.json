@@ -62,7 +62,7 @@
     "pngjs": "^7.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "size-limit": "^11.1.6",
+    "size-limit": "^14.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vitest": "^5.0.1"
