@@ -1,22 +1,21 @@
-name: Publier sur npm
+name: Archive sur GitHub Release
 
+# Le paquet s'installe depuis l'URL de l'archive, sans passer par npm et sans
+# que dist/ entre dans le dépôt. Le consommateur n'exécute aucun script, et son
+# fichier de verrouillage retient l'empreinte de l'archive.
 on:
   push:
-    # Une étiquette avec un suffixe (v0.1.0-rc.1) ne va pas sur npm : elle ne
-    # produit que l'archive de release.yml.
-    tags: ['v*', '!v*-*']
+    tags: ['v*']
 
 permissions:
   contents: read
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
-    environment: npm
     permissions:
-      contents: read
-      # Signe le paquet et le relie à ce dépôt, ce commit et ce workflow.
-      id-token: write
+      # Crée la release et y attache l'archive.
+      contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -24,9 +23,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           # Aucun cache npm ici : une branche peut empoisonner le cache, et
-          # cette tâche est celle qui signe et publie le paquet.
+          # cette tâche est celle qui produit l'archive installée ailleurs.
           package-manager-cache: false
       - run: npm ci --ignore-scripts
 
@@ -45,9 +43,15 @@ jobs:
       - run: npm run size
       - run: npm run check:package
 
-      # --provenance ajoute une attestation publique : elle dit de quel commit
-      # et de quel workflow vient le paquet. Elle a besoin de id-token: write.
-      - name: Publier
+      - name: Construire l'archive
+        run: npm pack
+
+      # Une étiquette avec un suffixe (v0.1.0-rc.1) donne une pré-version.
+      - name: Publier la release
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=""
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" ./*.tgz --verify-tag --generate-notes $prerelease

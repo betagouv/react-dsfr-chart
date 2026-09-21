@@ -261,8 +261,14 @@ runtime dependencies (which must stay empty), `npm audit signatures`, Zizmor
 over the workflows, and a Shai-Hulud detector. CodeQL and GitGuardian come from
 the betagouv organisation; this repository configures neither.
 
-`.github/workflows/publish.yml`: on a `v*` tag only. It compares the tag with
-the version of `package.json`, then runs `npm publish --provenance`.
+`.github/workflows/publish.yml`: on a `v*` tag without a suffix. It compares the
+tag with the version of `package.json`, then runs `npm publish --provenance`.
+
+`.github/workflows/release.yml`: on every `v*` tag, pre-release included
+(`v0.1.0-rc.1`). Same checks, then `npm pack` and a GitHub Release that carries
+the tarball. A consumer installs from that URL; `dist/` never enters the
+repository, and there is no `prepare` script because a git dependency would
+need the consumer to run install scripts.
 
 ## Security
 
