@@ -39,7 +39,7 @@
     "@gouvfr/dsfr": "1.14.4",
     "@gouvfr/dsfr-chart": "2.1.1",
     "@playwright/test": "^1.63.0",
-    "@size-limit/preset-small-lib": "^11.1.6",
+    "@size-limit/preset-small-lib": "^14.0.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.1.0",
@@ -59,7 +59,7 @@
     "react-dom": "^19.0.0",
     "size-limit": "^11.1.6",
     "typescript": "^5.7.2",
-    "vite": "^6.0.5",
-    "vitest": "^2.1.8"
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   }
 }
