@@ -58,6 +58,8 @@ WORLD lookup tables.
 | `npm run test:visual` | Playwright, ours vs upstream, pixel by pixel        |
 | `npm run gen:colors`| regenerates the colour tables (chroma-js, dev only)   |
 | `npm run demo`      | the side-by-side page, port 5175                      |
+| `npm run check:package` | the published tarball: no runtime dep, nothing outside `dist/` |
+| `npm run hooks:install` | the pre-commit secret scan (needs `gitleaks`)     |
 
 ## Hard Rules (non-negotiable)
 
@@ -90,6 +92,13 @@ WORLD lookup tables.
 - **SSR-safe.** No `window`, `document` or `ResizeObserver` at import time. The
   first render produces the frame and the data table; the drawing appears after
   mount, when the width is known.
+- **Nothing of a prop reaches the DOM as markup.** Every label, name, unit and
+  date is a React text node. No `dangerouslySetInnerHTML`, no `innerHTML`, and
+  no prop value inside a `src`, `href` or `style` attribute the browser
+  resolves. `tests/security.test.tsx` holds this.
+- **Every GitHub Action is pinned to a commit hash**, with the readable version
+  in a trailing comment. `.github/workflows/security.yml` runs Zizmor, which
+  fails the build otherwise.
 
 ## Anti-Patterns (never do)
 
@@ -243,6 +252,23 @@ A good implementation:
 
 ## CI
 
-`.github/workflows/ci.yml`: typecheck → unit tests → size budgets → colour
-generator idempotence → Playwright visual parity. Difference images are uploaded
-as an artifact when a visual test fails.
+`.github/workflows/ci.yml`: typecheck → unit tests → size budgets → published
+package → colour generator idempotence → Playwright visual parity. Difference
+images are uploaded as an artifact when a visual test fails.
+
+`.github/workflows/security.yml`: Gitleaks over the history, `npm audit` of the
+runtime dependencies (which must stay empty), `npm audit signatures`, Zizmor
+over the workflows, and a Shai-Hulud detector. CodeQL and GitGuardian come from
+the betagouv organisation; this repository configures neither.
+
+`.github/workflows/publish.yml`: on a `v*` tag only. It compares the tag with
+the version of `package.json`, then runs `npm publish --provenance`.
+
+## Security
+
+- A finding is reported through `SECURITY.md`, never as a public issue.
+- Dev-dependency advisories (`vitest`, `vite`) do not reach the published
+  package: it ships no runtime dependency. Do not treat them as urgent.
+- `.npmrc` sets `ignore-scripts=true`. A lifecycle script of the repository
+  therefore does not run either, which is why the pre-commit hook is installed
+  by hand.

@@ -4,19 +4,29 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # .npmrc coupe déjà les scripts d'installation ; le drapeau le redit ici,
+      # pour que la CI reste sûre si le fichier change.
+      - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm test
       - run: npm run size
+
+      # Le paquet publié ne contient que dist/ et n'a aucune dépendance.
+      - run: npm run check:package
 
       # The colour tables must stay the output of the generator.
       - run: npm run gen:colors
@@ -24,7 +34,7 @@ jobs:
 
       - run: npx playwright install --with-deps chromium
       - run: npm run test:visual
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
           name: visual-diff

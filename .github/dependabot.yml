@@ -1,0 +1,41 @@
+# Dependabot ouvre les mises à jour. Les alertes de vulnérabilité, elles, sont
+# activées par l'organisation betagouv.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    groups:
+      # Un seul lot pour l'outillage de test : ces paquets montent ensemble.
+      test:
+        patterns:
+          - vitest
+          - '@vitest/*'
+          - vite
+          - '@vitejs/*'
+          - '@playwright/*'
+          - jsdom
+          - '@testing-library/*'
+      types:
+        patterns:
+          - '@types/*'
+    ignore:
+      # react et react-dom restent en pair de la peerDependency `^19`.
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+      # La cible du portage est figée sur 2.1.1. Une montée de version se
+      # décide à la main, après relecture du code amont.
+      - dependency-name: '@gouvfr/dsfr-chart'
+      - dependency-name: '@gouvfr/dsfr'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday

@@ -1,0 +1,13 @@
+# Configuration Gitleaks du crochet de pré-commit et de la CI.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fichiers sans secret possible"
+paths = [
+  '''package-lock\.json''',
+  '''src/styles/colors\.generated\.css''',
+  '''src/core/colors\.generated\.ts''',
+  '''tests/fixtures/colors\.json''',
+  '''scripts/dsfr-colors\.json''',
+]

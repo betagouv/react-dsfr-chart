@@ -1,0 +1,51 @@
+name: Publier sur npm
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      # Signe le paquet et le relie à ce dépôt, ce commit et ce workflow.
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          # Aucun cache npm ici : une branche peut empoisonner le cache, et
+          # cette tâche est celle qui signe et publie le paquet.
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+
+      - name: Comparer l'étiquette et la version du paquet
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$version" ]; then
+            echo "L'étiquette $TAG ne correspond pas à la version $version du paquet."
+            exit 1
+          fi
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run size
+      - run: npm run check:package
+
+      # --provenance ajoute une attestation publique : elle dit de quel commit
+      # et de quel workflow vient le paquet. Elle a besoin de id-token: write.
+      - name: Publier
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

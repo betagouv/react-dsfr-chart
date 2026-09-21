@@ -20,17 +20,22 @@
       "types": "./dist/PieChart/index.d.ts",
       "import": "./dist/PieChart/index.js"
     },
-    "./css": "./dist/styles/chart.css"
+    "./css": {
+      "types": "./dist/styles/chart.css.d.ts",
+      "default": "./dist/styles/chart.css"
+    }
   },
   "scripts": {
     "gen:colors": "node scripts/gen-colors.mjs",
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && mkdir -p dist/styles && cat src/styles/colors.generated.css src/styles/chart.css > dist/styles/chart.css",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && mkdir -p dist/styles && cat src/styles/colors.generated.css src/styles/chart.css > dist/styles/chart.css && printf '// A side-effect import. The stylesheet carries no export.\\nexport {};\\n' > dist/styles/chart.css.d.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "size": "npm run build && size-limit",
     "demo": "vite --config demo/vite.config.ts",
-    "test:visual": "playwright test"
+    "test:visual": "playwright test",
+    "check:package": "node scripts/check-package.mjs",
+    "hooks:install": "git config core.hooksPath .githooks"
   },
   "peerDependencies": {
     "react": "^19"

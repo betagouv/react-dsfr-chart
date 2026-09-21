@@ -89,18 +89,39 @@ Le dessin arrive après le montage, quand la largeur est mesurée.
 ## Développement
 
 ```sh
-npm run gen:colors   # régénère les couleurs à partir de chroma-js
-npm test             # vitest, dont les tests de parité avec Chart.js
-npm run build        # tsc, ESM, un module par fichier
-npm run size         # size-limit
-npm run test:visual  # Playwright : compare le rendu avec celui de la version amont
-npm run demo         # comparaison côte à côte avec @gouvfr/dsfr-chart
+npm run gen:colors     # régénère les couleurs à partir de chroma-js
+npm test               # vitest, dont les tests de parité avec Chart.js
+npm run build          # tsc, ESM, un module par fichier
+npm run size           # size-limit
+npm run check:package  # contenu et dépendances du paquet publié
+npm run test:visual    # Playwright : compare le rendu avec celui de la version amont
+npm run demo           # comparaison côte à côte avec @gouvfr/dsfr-chart
+npm run hooks:install  # crochet de pré-commit : recherche de secrets
 ```
 
 Le test visuel dessine le même graphique avec les deux bibliothèques, dans une
 fenêtre de taille fixe, puis compte les pixels qui diffèrent. Neuf cas couvrent
 l'anneau, le camembert, les deux thèmes et quatre palettes. Le seuil est de
 0,5 % ; la mesure la plus haute est de 0,01 %.
+
+## Sécurité
+
+La bibliothèque n'a **aucune dépendance d'exécution** : le seul code qui arrive
+dans le navigateur est celui de ce dépôt. `npm run check:package` le vérifie à
+chaque commit, avec le contenu de l'archive publiée.
+
+Le texte passé en propriété (`x`, `name`, `unitTooltip`, `date`, `ariaLabel`)
+traverse React et reste du texte. La bibliothèque n'utilise jamais
+`dangerouslySetInnerHTML` ; `tests/security.test.tsx` le tient en place.
+
+Chaque version publiée porte une attestation de provenance npm, qui la relie au
+commit et au workflow qui l'ont produite :
+
+```sh
+npm audit signatures
+```
+
+Pour signaler une faille, lisez [SECURITY.md](SECURITY.md).
 
 ## Licence
 
