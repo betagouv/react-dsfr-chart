@@ -1,0 +1,20 @@
+[
+  {
+    "name": "PieChart (ESM, react externe)",
+    "path": "dist/PieChart/index.js",
+    "import": "{ PieChart }",
+    "ignore": [
+      "react",
+      "react-dom",
+      "react/jsx-runtime"
+    ],
+    "limit": "3.4 kB",
+    "gzip": true
+  },
+  {
+    "name": "Feuille de style",
+    "path": "dist/styles/chart.css",
+    "limit": "1.6 kB",
+    "gzip": true
+  }
+]

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.playwright-mcp/
+*.log
+visual/output/
+test-results/
+playwright-report/

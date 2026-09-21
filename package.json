@@ -1,0 +1,65 @@
+{
+  "name": "react-dsfr-chart",
+  "version": "0.1.0",
+  "description": "Composants React de visualisation graphique pour le Système de Design de l'État (DSFR) — SVG pur, zéro dépendance runtime",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./PieChart": {
+      "types": "./dist/PieChart/index.d.ts",
+      "import": "./dist/PieChart/index.js"
+    },
+    "./css": "./dist/styles/chart.css"
+  },
+  "scripts": {
+    "gen:colors": "node scripts/gen-colors.mjs",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && mkdir -p dist/styles && cat src/styles/colors.generated.css src/styles/chart.css > dist/styles/chart.css",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "size": "npm run build && size-limit",
+    "demo": "vite --config demo/vite.config.ts",
+    "test:visual": "playwright test"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  },
+  "devDependencies": {
+    "@gouvfr/dsfr": "1.14.4",
+    "@gouvfr/dsfr-chart": "2.1.1",
+    "@playwright/test": "^1.63.0",
+    "@size-limit/preset-small-lib": "^11.1.6",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/chroma-js": "^3.1.2",
+    "@types/node": "^22.10.2",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "chart.js": "^4.4.7",
+    "chroma-js": "^3.1.2",
+    "jsdom": "^25.0.1",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "size-limit": "^11.1.6",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
+  }
+}
