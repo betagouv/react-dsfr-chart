@@ -2,7 +2,9 @@ name: Publier sur npm
 
 on:
   push:
-    tags: ['v*']
+    # Une étiquette avec un suffixe (v0.1.0-rc.1) ne va pas sur npm : elle ne
+    # produit que l'archive de release.yml.
+    tags: ['v*', '!v*-*']
 
 permissions:
   contents: read

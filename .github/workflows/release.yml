@@ -1,0 +1,57 @@
+name: Archive sur GitHub Release
+
+# Le paquet s'installe depuis l'URL de l'archive, sans passer par npm et sans
+# que dist/ entre dans le dépôt. Le consommateur n'exécute aucun script, et son
+# fichier de verrouillage retient l'empreinte de l'archive.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # Crée la release et y attache l'archive.
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          # Aucun cache npm ici : une branche peut empoisonner le cache, et
+          # cette tâche est celle qui produit l'archive installée ailleurs.
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+
+      - name: Comparer l'étiquette et la version du paquet
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$version" ]; then
+            echo "L'étiquette $TAG ne correspond pas à la version $version du paquet."
+            exit 1
+          fi
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run size
+      - run: npm run check:package
+
+      - name: Construire l'archive
+        run: npm pack
+
+      # Une étiquette avec un suffixe (v0.1.0-rc.1) donne une pré-version.
+      - name: Publier la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=""
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" ./*.tgz --verify-tag --generate-notes $prerelease

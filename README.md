@@ -16,6 +16,13 @@ pas de chroma-js, pas de Vue.
 npm install react-dsfr-chart
 ```
 
+Avant la publication sur npm, le paquet s'installe depuis l'archive attachée à
+chaque [release GitHub](https://github.com/betagouv/react-dsfr-chart/releases) :
+
+```sh
+npm install https://github.com/betagouv/react-dsfr-chart/releases/download/v0.1.0/react-dsfr-chart-0.1.0.tgz
+```
+
 ```ts
 import { PieChart } from 'react-dsfr-chart/PieChart';
 import 'react-dsfr-chart/css';
