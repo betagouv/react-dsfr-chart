@@ -152,6 +152,67 @@ identique au pixel près.
 **Rendu serveur.** Le premier rendu produit le cadre et le tableau de données.
 Le dessin arrive après le montage, quand la largeur est mesurée.
 
+## Ce qui reste à faire
+
+`@gouvfr/dsfr-chart` propose onze graphiques. Trois sont portés. Voici les huit
+autres, avec ce qu'ils demandent réellement, maintenant que le cœur commun
+(échelles, graduations, mise en page, courbe, barres) existe et qu'il est
+vérifié face à Chart.js.
+
+### Prochaine étape évidente
+
+**`BarLineChart`** — des barres et une courbe sur deux axes de valeurs. Tout
+existe déjà : `core/plot.ts`, `core/bars.ts`, `core/spline.ts` et `core/Axes.tsx`.
+Il manque un second axe de valeurs sur la droite et le port de
+`generateBarLineChartColors`. C'est le graphique le moins cher et le plus
+utile : il couvre les tableaux de bord qui superposent un volume et un taux.
+
+**`GaugeChart`** — une jauge. `core/arc.ts` fait déjà les arcs du camembert ;
+il faut un arc partiel, une aiguille et le texte central. Peu de code.
+
+**`TableChart`** — un tableau, sans dessin. Aucune géométrie. Le tableau
+accessible (`core/DataTable.tsx`) en est déjà la moitié.
+
+### Ensuite
+
+**`ScatterChart`** — un nuage de points. Deux axes linéaires : `core/scale.ts`
+sait déjà le faire, et `core/plot.ts` accepte déjà un axe d'index linéaire. Il
+faut y ajouter les lignes de repère verticales et horizontales, que le
+`LineChart` n'a volontairement pas.
+
+**`RadarChart`** — un radar. Géométrie polaire entièrement nouvelle : axes en
+étoile, grille polygonale, échelle radiale. Rien à réutiliser au-delà des
+palettes.
+
+**`DataBox`** — un cadre qui porte un titre, une valeur et un graphique. En Vue,
+la version amont s'appuie sur `Teleport` et sur des attributs `databox-*` ; en
+React, c'est une simple composition de composants. Le travail est de concevoir
+l'API, pas de la coder.
+
+### À traiter à part
+
+**`MapChart` et `MapChartReg`** — les cartes de France, des régions, des
+académies et du monde. Elles demandent les tables `FRANCE` et `WORLD`
+(1 875 lignes en amont) et les tracés SVG de chaque territoire. Le poids de ces
+données dépasse à lui seul celui de toute la bibliothèque actuelle. Si ces
+cartes arrivent un jour, elles doivent être un point d'entrée séparé, et chaque
+fond de carte doit se charger indépendamment, sinon la raison d'être de ce
+paquet disparaît.
+
+### Améliorations qui ne sont pas des graphiques
+
+- **Fermer l'écart sur les étiquettes pivotées.** Voir la section précédente :
+  l'angle diffère de 3 degrés au plus. Il faudrait porter la négociation en
+  plusieurs passes entre les boîtes de mise en page de Chart.js
+  (`layouts.update` et `fitBoxes`).
+- **Une valeur écrite sur chaque barre**, à la manière du `LabelList` de
+  Recharts. Absent de la version amont, mais souvent demandé.
+- **Une propriété `colors`.** La version amont n'en expose pas pour ces trois
+  graphiques. Si elle arrive, la couleur de survol doit venir d'un
+  `filter: brightness()` en CSS, jamais de chroma-js à l'exécution : c'est la
+  seule manière de garder zéro dépendance et un changement de thème gratuit.
+- **Des tests d'accessibilité automatisés** sur les trois graphiques.
+
 ## Développement
 
 ```sh

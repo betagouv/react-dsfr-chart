@@ -21,8 +21,11 @@ Chart.js into every entry point. That is the whole reason this package exists.
 | `visual/`     | Playwright, pixel comparison against the upstream web component |
 | `demo/`       | Vite app: our charts side by side with `@gouvfr/dsfr-chart`  |
 
-Status: `PieChart`, `BarChart` and `LineChart`. Charts out of scope for v1:
-BarLine, Scatter, Radar, Gauge, DataBox, Table, maps.
+Status: `PieChart`, `BarChart` and `LineChart`. The eight charts of the upstream
+that are not ported — BarLine, Gauge, Table, Scatter, Radar, DataBox and the two
+maps — are listed in the README under "Ce qui reste à faire", in the order they
+should be taken, with what each one can reuse from `core/`. Read that section
+before starting one.
 
 ## Source of truth
 
