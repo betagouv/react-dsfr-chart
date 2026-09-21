@@ -1,0 +1,89 @@
+name: Sécurité
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Une vulnérabilité apparaît sans qu'un commit la déclenche.
+    - cron: '17 6 * * 1'
+
+# CodeQL et la détection de secrets GitGuardian tournent déjà au niveau de
+# l'organisation betagouv. Ce fichier couvre ce qu'elles ne voient pas.
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Secrets (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Un secret retiré du dernier commit reste lisible dans l'historique.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Installer Gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks version
+
+      - name: Chercher un secret dans l'historique
+        run: ./gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
+
+  dependencies:
+    name: Dépendances
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      # Le paquet publié n'a aucune dépendance d'exécution : cette commande doit
+      # rester verte pour toujours. Si elle échoue, une dépendance s'est glissée
+      # dans `dependencies`.
+      - name: Auditer les dépendances d'exécution
+        run: npm audit --omit=dev --audit-level=high
+
+      # Chaque paquet installé vient bien du registre npm et n'a pas été modifié.
+      - name: Vérifier les signatures du registre
+        run: npm audit signatures
+
+      # Informatif : une faille d'outil de développement ne touche pas les sites
+      # qui installent la bibliothèque.
+      - name: Auditer les dépendances de développement
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
+
+  workflows:
+    name: Workflows (Zizmor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+      - name: Auditer les workflows GitHub Actions
+        run: uvx zizmor==1.30.1 --persona=regular .github/workflows/
+
+  worm:
+    name: Chaîne d'approvisionnement npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # Action tierce, épinglée sur un commit : une étiquette se déplace.
+      # gensecaihq/Shai-Hulud-2.0-Detector@v2
+      - uses: gensecaihq/Shai-Hulud-2.0-Detector@2755f94762bf5012bc7be82c93e172eabbcd0802
+        with:
+          fail-on-critical: true
