@@ -41,6 +41,7 @@ export const DIV_STOPS = 4;
 
 const token = (theme, name) => source[theme][`dsfr-chart-colors-${name}`];
 const darken = (hex) => chroma(hex).darken(0.8).hex();
+const brighten = (hex) => chroma(hex).brighten(0.5).hex();
 
 /** `getSequentialAscending()` of src/utils/colors.js. */
 const sequential = (theme) => chroma.scale([token(theme, '09'), token(theme, '10')]).colors(SEQ_STOPS);
@@ -68,8 +69,8 @@ for (const theme of THEMES) {
     const hex = token(theme, name);
     vars[`--rdc-${name}`] = hex;
     vars[`--rdc-${name}-dk`] = darken(hex);
-    // The brightened variant is the hover colour of the line chart only. It
-    // joins the stylesheet when that chart lands.
+    // The line chart brightens on hover where the pie and the bar darken.
+    vars[`--rdc-${name}-br`] = brighten(hex);
   }
   sequential(theme).forEach((hex, i) => {
     vars[`--rdc-seq-${i}`] = hex;

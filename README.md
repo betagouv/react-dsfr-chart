@@ -7,8 +7,7 @@ Portage de [`@gouvfr/dsfr-chart`](https://github.com/GouvernementFR/dsfr-chart)
 2.1.1 en SVG, sans aucune dépendance d'exécution : pas de Chart.js, pas de D3,
 pas de chroma-js, pas de Vue.
 
-> Version 0.1.0 — seul le `PieChart` est disponible. Le `BarChart` et le
-> `LineChart` suivent.
+> Version 0.1.0 — `PieChart`, `BarChart` et `LineChart`.
 
 ## Installation
 
@@ -18,6 +17,8 @@ npm install react-dsfr-chart
 
 ```ts
 import { PieChart } from 'react-dsfr-chart/PieChart';
+import { BarChart } from 'react-dsfr-chart/BarChart';
+import { LineChart } from 'react-dsfr-chart/LineChart';
 import 'react-dsfr-chart/css';
 ```
 
@@ -29,6 +30,25 @@ import 'react-dsfr-chart/css';
   y={[74.8, 11.7, 1.6]}
   name={['Emplois à durée indéterminée', 'Non-salariés', 'Apprentis']}
   unitTooltip="%"
+/>
+```
+
+```tsx
+<BarChart
+  x={['2025', '2030', '2035']}
+  y={[[69.1, 70.3, 71.4]]}
+  name={['Population en millions']}
+  selectedPalette="default"
+  unitTooltip="millions"
+/>
+```
+
+```tsx
+<LineChart
+  x={[2001, 2002, 2003]}
+  y={[[51.5, 55.3, 61.5]]}
+  name={['Indice des prix']}
+  fill
 />
 ```
 
@@ -54,17 +74,56 @@ caractères, souvent du JSON. Ici, chaque propriété a son type réel.
 | —                  | `className`        |                                                   |
 | —                  | `style`            |                                                   |
 
+### `<BarChart>`
+
+| `<bar-chart>`      | `<BarChart>`          | Note                                             |
+| ------------------ | --------------------- | ------------------------------------------------ |
+| `x="[[…]]"`        | `x: string[]`         | Le tableau externe disparaît.                    |
+| `y="[[…], […]]"`   | `y: number[][]`       | Un tableau par série.                            |
+| `subx` · `suby`    | `subX` · `subY`       | Le second niveau, ouvert par un clic.            |
+| `name="[…]"`       | `name: string[]`      | Défaut : `Série 1`, `Série 2`, …                 |
+| `stacked="true"`   | `stacked: boolean`    |                                                  |
+| `horizontal="true"`| `horizontal: boolean` |                                                  |
+| `bar-size`         | `barSize`             | Défaut : `'flex'`.                               |
+| `max-bar-size`     | `maxBarSize`          | Défaut : `32`. `0` retire la limite.             |
+| `highlight-index`  | `highlightIndex`      | Avec la palette `neutral`.                       |
+| `x-min` · `x-max`  | `xMin` · `xMax`       | Une borne que l’axe englobe.                     |
+| `y-min` · `y-max`  | `yMin` · `yMax`       |                                                  |
+
+### `<LineChart>`
+
+| `<line-chart>`     | `<LineChart>`           | Note                                              |
+| ------------------ | ----------------------- | ------------------------------------------------- |
+| `x="[[…]]"`        | `x: (string\|number)[]` | Des nombres donnent un axe linéaire.              |
+| `y="[[…], […]]"`   | `y: number[][]`         | Un tableau par série.                             |
+| `name="[…]"`       | `name: string[]`        |                                                   |
+| —                  | `fill: boolean`         | Remplit sous la courbe. Absent de la version amont. |
+| `x-min` · `x-max`  | `xMin` · `xMax`         |                                                   |
+| `y-min` · `y-max`  | `yMin` · `yMax`         |                                                   |
+
+`vline`, `hline` et leurs attributs de couleur et de nom ne sont pas portés :
+la version amont les signale comme non documentés et non destinés à l’usage.
+
+Les trois graphiques acceptent aussi `selectedPalette`, `unitTooltip`, `date`,
+`aspectRatio`, `ariaLabel`, `id`, `className` et `style`.
+
 ## Taille
 
 Mesures `size-limit` (esbuild, minifié et gzippé, `react` externe) :
 
-| Ce qui est chargé          | Taille    |
-| -------------------------- | --------- |
-| `PieChart`                 | 3,38 ko   |
-| Feuille de style           | 1,54 ko   |
-| Dépendances d'exécution    | 0         |
+| Ce qui est chargé           | Taille    |
+| --------------------------- | --------- |
+| `PieChart`                  | 3,56 ko   |
+| `BarChart`                  | 6,80 ko   |
+| `LineChart`                 | 5,82 ko   |
+| Les trois ensemble          | 9,27 ko   |
+| Feuille de style            | 1,82 ko   |
+| Dépendances d'exécution     | 0         |
 
-Pour comparaison, `@gouvfr/dsfr-chart` charge 116 ko pour le même graphique,
+Les trois ensemble pèsent moins que deux pris séparément : le cœur commun
+n'est pas dupliqué par point d'entrée.
+
+Pour comparaison, `@gouvfr/dsfr-chart` charge 116 ko pour un seul camembert,
 Chart.js 52 ko et Recharts 100 ko.
 
 ## Ce qui change par rapport à `@gouvfr/dsfr-chart`
@@ -83,6 +142,13 @@ valeurs affichées. La version amont conserve celles du premier niveau, ce qui
 donne, avec une palette séquentielle, des couleurs qui ne correspondent plus
 aux valeurs.
 
+**Étiquettes pivotées.** Quand les étiquettes de catégories sont trop longues,
+Chart.js les fait pivoter après une négociation en plusieurs passes entre ses
+boîtes de mise en page. Ce portage ne la reproduit pas : l'angle peut être plus
+raide de 3 degrés, la zone de tracé se décaler de 4 pixels, et l'axe des
+valeurs porter moins de graduations. Sans rotation, la zone de tracé est
+identique au pixel près.
+
 **Rendu serveur.** Le premier rendu produit le cadre et le tableau de données.
 Le dessin arrive après le montage, quand la largeur est mesurée.
 
@@ -100,9 +166,12 @@ npm run hooks:install  # crochet de pré-commit : recherche de secrets
 ```
 
 Le test visuel dessine le même graphique avec les deux bibliothèques, dans une
-fenêtre de taille fixe, puis compte les pixels qui diffèrent. Neuf cas couvrent
-l'anneau, le camembert, les deux thèmes et quatre palettes. Le seuil est de
-0,5 % ; la mesure la plus haute est de 0,01 %.
+fenêtre de taille fixe, puis compte les pixels qui diffèrent. Vingt-cinq cas
+couvrent les trois graphiques, les deux thèmes et six palettes. Le camembert
+reste sous 0,01 % : son texte est dans le DOM. Les barres et les lignes posent
+leurs étiquettes dans le SVG, qu'un canvas ne rend jamais à l'identique ; chaque
+cas porte la mesure du jour (0,9 % à 12,7 %) et le test autorise un point de
+plus.
 
 ## Sécurité
 

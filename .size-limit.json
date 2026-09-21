@@ -8,13 +8,49 @@
       "react-dom",
       "react/jsx-runtime"
     ],
-    "limit": "3.4 kB",
+    "limit": "3.6 kB",
+    "gzip": true
+  },
+  {
+    "name": "BarChart (ESM, react externe)",
+    "path": "dist/BarChart/index.js",
+    "import": "{ BarChart }",
+    "ignore": [
+      "react",
+      "react-dom",
+      "react/jsx-runtime"
+    ],
+    "limit": "6.9 kB",
+    "gzip": true
+  },
+  {
+    "name": "LineChart (ESM, react externe)",
+    "path": "dist/LineChart/index.js",
+    "import": "{ LineChart }",
+    "ignore": [
+      "react",
+      "react-dom",
+      "react/jsx-runtime"
+    ],
+    "limit": "5.9 kB",
+    "gzip": true
+  },
+  {
+    "name": "Les trois graphiques (ESM, react externe)",
+    "path": "dist/index.js",
+    "import": "{ PieChart, BarChart, LineChart }",
+    "ignore": [
+      "react",
+      "react-dom",
+      "react/jsx-runtime"
+    ],
+    "limit": "9.3 kB",
     "gzip": true
   },
   {
     "name": "Feuille de style",
     "path": "dist/styles/chart.css",
-    "limit": "1.6 kB",
+    "limit": "1.9 kB",
     "gzip": true
   }
 ]

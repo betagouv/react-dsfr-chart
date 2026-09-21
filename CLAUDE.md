@@ -21,8 +21,8 @@ Chart.js into every entry point. That is the whole reason this package exists.
 | `visual/`     | Playwright, pixel comparison against the upstream web component |
 | `demo/`       | Vite app: our charts side by side with `@gouvfr/dsfr-chart`  |
 
-Status: `PieChart` only. `BarChart` and `LineChart` follow. Charts out of scope
-for v1: BarLine, Scatter, Radar, Gauge, DataBox, Table, maps.
+Status: `PieChart`, `BarChart` and `LineChart`. Charts out of scope for v1:
+BarLine, Scatter, Radar, Gauge, DataBox, Table, maps.
 
 ## Source of truth
 
@@ -92,6 +92,12 @@ WORLD lookup tables.
 - **SSR-safe.** No `window`, `document` or `ResizeObserver` at import time. The
   first render produces the frame and the data table; the drawing appears after
   mount, when the width is known.
+- **A canvas measures text and draws nothing.** `core/measureText.ts` keeps one
+  offscreen canvas because Chart.js sizes the plot box from the width of the
+  widest tick label, which only `measureText` gives. The charts themselves are
+  SVG; nothing is ever painted on that canvas. Measurements are cached and the
+  cache is cleared once `document.fonts.ready` resolves, or every axis would
+  keep the room the fallback font asked for.
 - **Nothing of a prop reaches the DOM as markup.** Every label, name, unit and
   date is a React text node. No `dangerouslySetInnerHTML`, no `innerHTML`, and
   no prop value inside a `src`, `href` or `style` attribute the browser
@@ -157,13 +163,17 @@ stylesheet.
 the output, either shrink it or raise the budget **in the same commit**, with
 the new measurement in the message.
 
-| Entry            | Budget  |
-| ---------------- | ------- |
-| `PieChart`       | 3.4 kB  |
-| Stylesheet       | 1.6 kB  |
-| Runtime deps     | 0       |
+| Entry                 | Budget  |
+| --------------------- | ------- |
+| `PieChart`            | 3.6 kB  |
+| `BarChart`            | 6.9 kB  |
+| `LineChart`           | 5.9 kB  |
+| The three together    | 9.3 kB  |
+| Stylesheet            | 1.9 kB  |
+| Runtime deps          | 0       |
 
-Targets for the full set: Pie + Bar + Line ≤ 15 kB gzipped.
+The three together weigh less than any two apart: `core/` is shared, never
+duplicated per entry point.
 
 ## Tests
 
@@ -172,6 +182,15 @@ Targets for the full set: Pie + Bar + Line ≤ 15 kB gzipped.
   radii, angles and tooltip anchors over a table of sizes and data sets. A size
   whose ratio is not the chart's `aspectRatio` is not a valid case — Chart.js
   clamps it.
+- **Scales** (`tests/scale.test.ts`): the ticks, the minimum and the maximum of
+  a linear axis against Chart.js, over four sizes and sixteen data shapes.
+- **Layout** (`tests/layout.test.ts`): the plot box against Chart.js. It is
+  equal to the pixel whenever the labels do not rotate; when they do, the
+  tolerance is 3 degrees and 4 pixels — see the deviation below.
+- **Bars** (`tests/bars.test.ts`): the width and the centre of every bar against
+  Chart.js, flexible and fixed, grouped and stacked, both orientations.
+- **Spline** (`tests/spline.test.ts`): the Bézier control points of the curve
+  against Chart.js.
 - **Colours** (`tests/colors.test.ts`): the generated stylesheet against a fresh
   chroma-js computation, both themes.
 - **Palette** (`tests/palette.test.ts`): resolves our `var()` / `color-mix()`
@@ -180,9 +199,13 @@ Targets for the full set: Pie + Bar + Line ≤ 15 kB gzipped.
 - **Components**: render, prop change redraws, unmount disconnects the
   `ResizeObserver`, data table content, tooltip on hover and on focus, legend
   defaults.
-- **Visual** (`visual/pie.spec.ts`): same data, both libraries, fixed viewport,
-  `deviceScaleFactor: 1`. Tolerance 0.5 % of pixels; the highest measurement is
-  0.01 %. A self-check compares a doughnut with a pie and requires the harness
+- **Visual** (`visual/{pie,bar,line}.spec.ts`): same data, both libraries, fixed
+  viewport, `deviceScaleFactor: 1`. The pie holds a 0.5 % tolerance and measures
+  0.01 %, because its text lives in the DOM, not in the drawing. The bar and the
+  line put their axis labels inside the SVG, which a canvas never rasterises the
+  same way, so each case carries the share measured today and the test allows
+  one percentage point above it: 0.9 % to 12.7 % for the bar, 1.1 % to 6.5 % for
+  the line. A self-check compares a doughnut with a pie and requires the harness
   to report a difference — a result of 0.00 % proves nothing otherwise.
 
 ## Intentional deviations from `@gouvfr/dsfr-chart`
@@ -204,6 +227,18 @@ Don't "fix" these back:
   bar, `brighten(0.5)` for line. Keep the asymmetry.
 - **Value-based palettes interpolate in CSS**, so the hover colour of a scaled
   slice is an approximation of the upstream's. Accepted.
+- **A rotated category label turns a few degrees more than in Chart.js.**
+  Chart.js settles the angle through a negotiation between its layout boxes
+  over several passes, which this port does not reproduce. The plot box is
+  equal to the pixel when nothing rotates. When a label does rotate, the angle
+  is up to 3 degrees steeper, the box moves by up to 4 pixels, and the value
+  axis can end up with fewer ticks because a shorter plot holds fewer of them.
+- **A tick label on a value axis is formatted in French** (`fr-FR`), where
+  Chart.js follows the locale of the page. The upstream already formats its
+  tooltip in French, so this makes the two agree.
+- **The line chart drops `vline`, `hline` and their colour and name
+  attributes.** The upstream marks them undocumented and not meant to be used,
+  and comments them out of its own examples.
 
 ## Commits
 

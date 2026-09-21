@@ -4,6 +4,7 @@ import { ChartFrame } from '../core/ChartFrame.js';
 import { DataTable } from '../core/DataTable.js';
 import { formatNumber } from '../core/format.js';
 import { generateColors, type Palette } from '../core/palette.js';
+import { SubChartHeader } from '../core/SubChartHeader.js';
 import type { TooltipState } from '../core/Tooltip.js';
 import { useSize } from '../core/useSize.js';
 
@@ -108,22 +109,13 @@ export function PieChart({
   };
 
   const header = hasSubChart ? (
-    <div className={level === null ? 'fr-mt-6v' : ''} style={{ textAlign: 'center', position: 'relative' }}>
-      {level !== null ? (
-        <button
-          type="button"
-          className="fr-btn fr-btn--sm fr-icon-arrow-go-back-fill fr-btn--icon-left fr-btn--tertiary-no-outline fr-ml-4w"
-          style={{ position: 'absolute', left: 0 }}
-          onClick={() => {
-            setActive(null);
-            setLevel(null);
-          }}
-        >
-          Retour
-        </button>
-      ) : null}
-      {level !== null ? <p className="fr-mb-0">{x[level]}</p> : null}
-    </div>
+    <SubChartHeader
+      title={level === null ? null : (x[level] ?? '')}
+      onBack={() => {
+        setActive(null);
+        setLevel(null);
+      }}
+    />
   ) : null;
 
   return (
