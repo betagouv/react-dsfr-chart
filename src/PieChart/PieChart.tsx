@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { arcCenter, arcPath, arcs, BORDER_WIDTH, ring } from '../core/arc.js';
 import { ChartFrame } from '../core/ChartFrame.js';
+import { customColorSet, withCustomColors, type CustomColors } from '../core/customColors.js';
 import { DataTable } from '../core/DataTable.js';
 import { formatNumber } from '../core/format.js';
 import { generateColors, type Palette } from '../core/palette.js';
@@ -21,6 +22,12 @@ export interface PieChartProps {
   /** `true` draws a pie, `false` a doughnut. */
   fill?: boolean;
   selectedPalette?: Palette;
+  /**
+   * One CSS colour per slice, which replaces the palette where it is given.
+   * An entry that is absent or unreadable keeps its palette colour, and the
+   * second level always takes the palette.
+   */
+  colors?: CustomColors;
   /** The unit that follows the value in the tooltip. */
   unitTooltip?: string;
   /** The date of the last update, shown under the legend. */
@@ -44,6 +51,7 @@ export function PieChart({
   name,
   fill = false,
   selectedPalette,
+  colors,
   unitTooltip,
   date,
   aspectRatio = 2,
@@ -60,7 +68,7 @@ export function PieChart({
   const labels = level === null ? x : (subX?.[level] ?? x);
   const values = level === null ? y : (subY?.[level] ?? y);
 
-  const { colors, hovers } = useMemo(() => {
+  const palette = useMemo(() => {
     // Port of `loadColors` of src/components/PieChart.vue: a categorical
     // palette colours by slice index, any other one by slice value.
     const byIndex = !selectedPalette || selectedPalette === 'categorical';
@@ -70,6 +78,14 @@ export function PieChart({
     });
     return { colors: colorParse.flat(), hovers: colorHover.flat() };
   }, [values, selectedPalette]);
+
+  // The `colors` prop names the slices of the first level. The second level
+  // holds other data, so it takes the palette, as the drill-down colours do.
+  const custom = useMemo(() => customColorSet(level === null ? colors : undefined), [colors, level]);
+  const sliceColors = useMemo(
+    () => palette.colors.map((color, index) => custom.refs[index] ?? color),
+    [palette, custom],
+  );
 
   const geometry = useMemo(() => {
     if (width <= 0 || height <= 0) return null;
@@ -81,9 +97,9 @@ export function PieChart({
     const names = level === null ? name : labels;
     return values.map((_, index) => ({
       label: names?.[index] ?? `Série ${index + 1}`,
-      color: colors[index] ?? 'var(--rdc-neutral)',
+      color: sliceColors[index] ?? 'var(--rdc-neutral)',
     }));
-  }, [values, labels, name, colors, level]);
+  }, [values, labels, name, sliceColors, level]);
 
   const tooltip: TooltipState | null = useMemo(() => {
     if (active === null || !geometry) return null;
@@ -92,14 +108,14 @@ export function PieChart({
       title: labels[active] ?? '',
       rows: [
         {
-          color: colors[active] ?? 'var(--rdc-neutral)',
+          color: sliceColors[active] ?? 'var(--rdc-neutral)',
           value: `${formatNumber(values[active])}${unitTooltip ? ` ${unitTooltip}` : ''}`,
         },
       ],
       x: cx,
       y: cy,
     };
-  }, [active, geometry, labels, values, colors, unitTooltip]);
+  }, [active, geometry, labels, values, sliceColors, unitTooltip]);
 
   const drillDown = (index: number) => {
     if (!hasSubChart || level !== null) return;
@@ -122,7 +138,7 @@ export function PieChart({
     <ChartFrame
       id={id}
       className={className}
-      style={style}
+      style={withCustomColors(style, custom)}
       chartRef={ref}
       width={width}
       height={height}
@@ -143,12 +159,15 @@ export function PieChart({
           {geometry.slices.map((slice, index) => {
             const path = arcPath(geometry.box, slice);
             if (!path) return null;
-            const color = (active === index ? hovers[index] : colors[index]) ?? 'var(--rdc-neutral)';
+            // A custom colour has no second token, so its hover state is a
+            // CSS filter. A palette colour keeps the darkened token upstream uses.
+            const tinted = active === index && Boolean(custom.refs[index]);
+            const color = (active === index && !tinted ? palette.hovers[index] : sliceColors[index]) ?? 'var(--rdc-neutral)';
             const clickable = hasSubChart && level === null && Boolean(subY?.[index]?.length);
             return (
               <path
                 key={index}
-                className={`rdc-arc${clickable ? ' rdc-arc--clickable' : ''}`}
+                className={`rdc-arc${clickable ? ' rdc-arc--clickable' : ''}${tinted ? ' rdc-hover--darken' : ''}`}
                 d={path}
                 fill={color}
                 stroke={color}

@@ -41,6 +41,9 @@ function Case({ title, ours, theirs }: CaseProps) {
   );
 }
 
+/** Trois couleurs hors palette, pour la propriété `colors`. */
+const CUSTOM_COLORS = ['#e4794a', 'var(--rdc-neutral)', 'oklch(62.8% 0.25 264)'];
+
 export function App() {
   const [theme, setTheme] = useTheme();
   const [palette, setPalette] = useState<Palette | ''>('');
@@ -163,6 +166,18 @@ export function App() {
         title="Aire (extension absente de la version amont)"
         ours={<LineChart {...lineDefault} fill selectedPalette={palette || lineDefault.selectedPalette} />}
         theirs={<p className="fr-text--sm">La version amont n’a pas d’option d’aire.</p>}
+      />
+
+      <Case
+        title="Couleurs choisies (extension absente de la version amont)"
+        ours={<PieChart {...pie} colors={CUSTOM_COLORS} />}
+        theirs={<p className="fr-text--sm">La version amont n’expose pas de propriété de couleur.</p>}
+      />
+
+      <Case
+        title="Couleurs choisies, une par série"
+        ours={<LineChart {...lineMultiple} colors={CUSTOM_COLORS} />}
+        theirs={<p className="fr-text--sm">La version amont n’expose pas de propriété de couleur.</p>}
       />
     </main>
   );

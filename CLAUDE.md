@@ -103,8 +103,11 @@ WORLD lookup tables.
   keep the room the fallback font asked for.
 - **Nothing of a prop reaches the DOM as markup.** Every label, name, unit and
   date is a React text node. No `dangerouslySetInnerHTML`, no `innerHTML`, and
-  no prop value inside a `src`, `href` or `style` attribute the browser
-  resolves. `tests/security.test.tsx` holds this.
+  no prop value inside a `src` or `href` attribute the browser resolves. The
+  one prop that reaches a `style` attribute is `colors`, and only through the
+  grammar of `core/customColors.ts`, which accepts a plain colour and nothing
+  else — no `url(…)`, no quote, no semicolon. `tests/security.test.tsx` holds
+  this.
 - **Every GitHub Action is pinned to a commit hash**, with the readable version
   in a trailing comment. `.github/workflows/security.yml` runs Zizmor, which
   fails the build otherwise.
@@ -199,6 +202,8 @@ duplicated per entry point.
   against Chart.js.
 - **Colours** (`tests/colors.test.ts`): the generated stylesheet against a fresh
   chroma-js computation, both themes.
+- **Custom colours** (`tests/customColors.test.ts`): the grammar of the
+  `colors` prop, what it accepts and what it refuses.
 - **Palette** (`tests/palette.test.ts`): resolves our `var()` / `color-mix()`
   output to hexadecimal and compares with `chroma.scale().domain([max, min])`.
   One channel of tolerance: the upstream rounds each stop before interpolating.
@@ -233,9 +238,14 @@ Don't "fix" these back:
   palette.
 - **`x` and `y` drop the outer array.** The upstream reads index 0 only. Drop the
   outer array wherever that is true, and nowhere else.
-- **No custom-colour prop.** Upstream 2.1.1 exposes none for pie, bar and line;
-  its `tmpColorParse` branch is dead code. If one is ever added, derive the hover
-  colour with a CSS `filter: brightness()`, never with chroma-js at runtime.
+- **A `colors` prop, which upstream 2.1.1 has not.** Its `tmpColorParse` branch
+  is dead code. One colour per slice (pie) or per series (bar, line); an entry
+  that `core/customColors.ts` refuses falls back to the palette, and the second
+  level always takes the palette. The colour never reaches the drawing: the
+  chart writes it into `--rdc-custom-N` on its own wrapper, so every `fill`
+  stays a `var()` the stylesheet resolves. The hover colour comes from a CSS
+  `filter: brightness()` — 0.78 for pie and bar, 1.155 for line — never from
+  chroma-js at runtime.
 - **`LineChart` gains `fill?: boolean`** (area), which the upstream lacks. It
   exists to replace `recharts`' `AreaChart`.
 - **Hover colours differ per chart, as upstream does**: `darken(0.8)` for pie and

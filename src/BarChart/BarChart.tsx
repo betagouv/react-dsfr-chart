@@ -2,6 +2,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { Axes } from '../core/Axes.js';
 import { barSpan, DEFAULT_MAX_BAR_SIZE, stackedRanges } from '../core/bars.js';
 import { ChartFrame } from '../core/ChartFrame.js';
+import { customColorSet, withCustomColors, type CustomColors } from '../core/customColors.js';
 import { DataTable } from '../core/DataTable.js';
 import { formatNumber } from '../core/format.js';
 import { generateColors, type ChartColor, type Palette } from '../core/palette.js';
@@ -37,6 +38,12 @@ export interface BarChartProps {
   yMin?: number;
   yMax?: number;
   selectedPalette?: Palette;
+  /**
+   * One CSS colour per series, which replaces the palette where it is given.
+   * An entry that is absent or unreadable keeps its palette colour, and the
+   * second level always takes the palette.
+   */
+  colors?: CustomColors;
   /** The unit that follows the value in the tooltip. */
   unitTooltip?: string;
   /** The date of the last update, shown under the legend. */
@@ -68,6 +75,7 @@ export function BarChart({
   yMin,
   yMax,
   selectedPalette,
+  colors,
   unitTooltip,
   date,
   aspectRatio = 2,
@@ -86,10 +94,21 @@ export function BarChart({
   // Memoised because a fresh array on every render would redraw the whole chart.
   const series = useMemo(() => (level === null ? y : [subY?.[level] ?? []]), [level, y, subY]);
 
-  const { colors, hovers, legendColors } = useMemo(() => {
-    const { colorParse, colorHover, legendColors } = generateColors({ yparse: series, highlightIndex, selectedPalette });
-    return { colors: colorParse, hovers: colorHover, legendColors };
-  }, [series, highlightIndex, selectedPalette]);
+  const palette = useMemo(
+    () => generateColors({ yparse: series, highlightIndex, selectedPalette }),
+    [series, highlightIndex, selectedPalette],
+  );
+
+  // The `colors` prop names the series of the first level. The second level
+  // holds other data, so it takes the palette, as the drill-down colours do.
+  const custom = useMemo(() => customColorSet(level === null ? colors : undefined), [colors, level]);
+  const { barColors, legendColors } = useMemo(
+    () => ({
+      barColors: palette.colorParse.map((set, s) => (custom.refs[s] ? set.map(() => custom.refs[s] as ChartColor) : set)),
+      legendColors: palette.legendColors.map((color, s) => custom.refs[s] ?? color),
+    }),
+    [palette, custom],
+  );
 
   const geometry = useMemo(() => {
     const fitted = plot({
@@ -151,7 +170,7 @@ export function BarChart({
     if (active === null || !geometry) return null;
     // The upstream tooltip runs in `index` mode: every series at that category.
     const rows = series
-      .map((values, s) => ({ color: (colors[s]?.[active] ?? 'var(--rdc-neutral)') as ChartColor, value: `${formatNumber(values[active])}${unitTooltip ? ` ${unitTooltip}` : ''}`, raw: values[active] }))
+      .map((values, s) => ({ color: (barColors[s]?.[active] ?? 'var(--rdc-neutral)') as ChartColor, value: `${formatNumber(values[active])}${unitTooltip ? ` ${unitTooltip}` : ''}`, raw: values[active] }))
       .filter((row) => Number.isFinite(row.raw))
       .map(({ color, value }) => ({ color, value }));
     if (!rows.length) return null;
@@ -160,7 +179,7 @@ export function BarChart({
     const anchorX = spans.reduce((sum, bar) => sum + (horizontal ? bar.tip : bar.centre), 0) / spans.length;
     const anchorY = spans.reduce((sum, bar) => sum + (horizontal ? bar.centre : bar.tip), 0) / spans.length;
     return { title: labels[active] ?? '', rows, x: anchorX, y: anchorY };
-  }, [active, geometry, series, colors, labels, unitTooltip, horizontal]);
+  }, [active, geometry, series, barColors, labels, unitTooltip, horizontal]);
 
   const drillDown = (index: number) => {
     if (!hasSubChart || level !== null) return;
@@ -173,7 +192,7 @@ export function BarChart({
     <ChartFrame
       id={id}
       className={className}
-      style={style}
+      style={withCustomColors(style, custom)}
       chartRef={ref}
       width={width}
       height={height}
@@ -212,12 +231,15 @@ export function BarChart({
           {geometry.bars.map((set, s) =>
             set.map((bar, index) => {
               if (bar.width <= 0 && bar.height <= 0) return null;
-              const colour = (active === index ? hovers[s]?.[index] : colors[s]?.[index]) ?? 'var(--rdc-neutral)';
+              // A custom colour has no second token, so its hover state is a
+              // CSS filter. A palette colour keeps the darkened token upstream uses.
+              const tinted = active === index && Boolean(custom.refs[s]);
+              const colour = (active === index && !tinted ? palette.colorHover[s]?.[index] : barColors[s]?.[index]) ?? 'var(--rdc-neutral)';
               const clickable = hasSubChart && level === null && Boolean(subY?.[index]?.length);
               return (
                 <rect
                   key={`${s}-${index}`}
-                  className={`rdc-bar${clickable ? ' rdc-bar--clickable' : ''}`}
+                  className={`rdc-bar${clickable ? ' rdc-bar--clickable' : ''}${tinted ? ' rdc-hover--darken' : ''}`}
                   x={bar.x}
                   y={bar.y}
                   width={Math.max(bar.width, 0)}

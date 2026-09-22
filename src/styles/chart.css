@@ -149,7 +149,7 @@
 }
 
 .rdc .rdc-bar {
-  transition: fill 0.15s ease-out;
+  transition: fill 0.15s ease-out, filter 0.15s ease-out;
 }
 
 .rdc .rdc-bar--clickable {
@@ -169,7 +169,7 @@
 }
 
 .rdc .rdc-point {
-  transition: fill 0.15s ease-out;
+  transition: fill 0.15s ease-out, filter 0.15s ease-out;
 }
 
 /* The line a line chart draws under the pointer, through the active value. */
@@ -198,11 +198,24 @@
 }
 
 .rdc .rdc-arc {
-  transition: fill 0.15s ease-out, stroke 0.15s ease-out;
+  transition: fill 0.15s ease-out, stroke 0.15s ease-out, filter 0.15s ease-out;
 }
 
 .rdc .rdc-arc--clickable {
   cursor: pointer;
+}
+
+/* The hover variant of a colour that comes from the `colors` prop. A palette
+ * colour carries a second token for its hover state; a colour given by the
+ * host application carries none, so the tint is a filter. The two factors fit
+ * the upstream `darken(0.8)` and `brighten(0.5)` best over the 28 colours of
+ * colors.json: 14 and 13 of 255 away, per channel. */
+.rdc .rdc-hover--darken {
+  filter: brightness(0.78);
+}
+
+.rdc .rdc-hover--brighten {
+  filter: brightness(1.155);
 }
 
 .rdc svg :focus-visible {

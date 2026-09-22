@@ -8,7 +8,7 @@
       "react-dom",
       "react/jsx-runtime"
     ],
-    "limit": "3.6 kB",
+    "limit": "3.95 kB",
     "gzip": true
   },
   {
@@ -20,7 +20,7 @@
       "react-dom",
       "react/jsx-runtime"
     ],
-    "limit": "6.9 kB",
+    "limit": "7.25 kB",
     "gzip": true
   },
   {
@@ -32,7 +32,7 @@
       "react-dom",
       "react/jsx-runtime"
     ],
-    "limit": "6 kB",
+    "limit": "6.3 kB",
     "gzip": true
   },
   {
@@ -44,13 +44,13 @@
       "react-dom",
       "react/jsx-runtime"
     ],
-    "limit": "9.5 kB",
+    "limit": "9.95 kB",
     "gzip": true
   },
   {
     "name": "Feuille de style",
     "path": "dist/styles/chart.css",
-    "limit": "2.05 kB",
+    "limit": "2.1 kB",
     "gzip": true
   }
 ]

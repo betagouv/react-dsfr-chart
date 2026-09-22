@@ -139,11 +139,56 @@ describe('BarChart', () => {
     unmount();
     expect(observers[before].disconnected).toBe(true);
   });
+
+  it('paints every bar of a series with the colour the colors prop gives', () => {
+    const { container } = render(<BarChart x={X} y={[Y[0], [5, 6, 7]]} colors={['#ff0000', 'var(--mine)']} />);
+    expect(bars(container).map((bar) => bar.getAttribute('fill'))).toEqual([
+      'var(--rdc-custom-0)',
+      'var(--rdc-custom-0)',
+      'var(--rdc-custom-0)',
+      'var(--rdc-custom-1)',
+      'var(--rdc-custom-1)',
+      'var(--rdc-custom-1)',
+    ]);
+    const wrapper = container.querySelector('.rdc') as HTMLElement;
+    expect(wrapper.style.getPropertyValue('--rdc-custom-0')).toBe('#ff0000');
+  });
+
+  it('keeps the palette for a series the colors prop leaves out or writes badly', () => {
+    const plain = render(<BarChart x={X} y={[Y[0], [5, 6, 7]]} />);
+    const custom = render(<BarChart x={X} y={[Y[0], [5, 6, 7]]} colors={['url(https://example.com/x.png)', '#00ff00']} />);
+    const palette = bars(plain.container).map((bar) => bar.getAttribute('fill'));
+    const painted = bars(custom.container).map((bar) => bar.getAttribute('fill'));
+    expect(painted.slice(0, 3)).toEqual(palette.slice(0, 3));
+    expect(painted.slice(3)).toEqual(['var(--rdc-custom-1)', 'var(--rdc-custom-1)', 'var(--rdc-custom-1)']);
+  });
+
+  it('colours the legend like the bars, and darkens a custom bar on hover with a filter', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<BarChart x={X} y={Y} colors={['#ff0000']} />);
+    const dot = container.querySelector('.legend_dot') as HTMLElement;
+    expect(dot.style.backgroundColor).toBe('var(--rdc-custom-0)');
+    const first = bars(container)[0];
+    await user.hover(first);
+    expect(first).toHaveClass('rdc-hover--darken');
+    expect(first.getAttribute('fill')).toBe('var(--rdc-custom-0)');
+  });
 });
 
 describe('BarChart with a second level', () => {
   const subX = [['Janvier', 'Février'], ['Mars'], []];
   const subY = [[6, 5.1], [10.5], []];
+
+  it('gives the second level the palette, never the colors prop', async () => {
+    const user = userEvent.setup();
+    const plain = render(<BarChart x={X} y={Y} subX={subX} subY={subY} />);
+    const custom = render(<BarChart x={X} y={Y} subX={subX} subY={subY} colors={['#ff0000']} />);
+    await user.click(bars(plain.container)[0]);
+    await user.click(bars(custom.container)[0]);
+    expect(bars(custom.container).map((bar) => bar.getAttribute('fill'))).toEqual(
+      bars(plain.container).map((bar) => bar.getAttribute('fill')),
+    );
+  });
 
   it('opens the second level on a click, then returns to the first one', async () => {
     const user = userEvent.setup();
