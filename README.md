@@ -73,6 +73,7 @@ caractères, souvent du JSON. Ici, chaque propriété a son type réel.
 | `name="[…]"`       | `name: string[]`   | Défaut : `Série 1`, `Série 2`, …                  |
 | `fill="true"`      | `fill: boolean`    | `true` : camembert. `false` (défaut) : anneau.    |
 | `selected-palette` | `selectedPalette`  |                                                   |
+| —                  | `colors: string[]` | Une couleur par part. Absent de la version amont. |
 | `unit-tooltip`     | `unitTooltip`      |                                                   |
 | `date`             | `date`             |                                                   |
 | `aspect-ratio`     | `aspectRatio`      | Défaut : `2`.                                     |
@@ -111,8 +112,32 @@ caractères, souvent du JSON. Ici, chaque propriété a son type réel.
 `vline`, `hline` et leurs attributs de couleur et de nom ne sont pas portés :
 la version amont les signale comme non documentés et non destinés à l’usage.
 
-Les trois graphiques acceptent aussi `selectedPalette`, `unitTooltip`, `date`,
-`aspectRatio`, `ariaLabel`, `id`, `className` et `style`.
+Les trois graphiques acceptent aussi `selectedPalette`, `colors`,
+`unitTooltip`, `date`, `aspectRatio`, `ariaLabel`, `id`, `className` et
+`style`.
+
+### La propriété `colors`
+
+Elle remplace la palette, part par part pour le camembert, série par série pour
+les barres et la courbe. Une entrée absente ou illisible garde sa couleur de
+palette, et le second niveau prend toujours la palette.
+
+```tsx
+<PieChart x={['A', 'B', 'C']} y={[60, 25, 15]} colors={['#000091', 'var(--ma-couleur)', 'red']} />
+```
+
+Sont acceptées les formes simples : `#rgb`, `#rrggbb`, `#rrggbbaa`, `rgb()`,
+`rgba()`, `hsl()`, `hwb()`, `lab()`, `lch()`, `oklab()`, `oklch()`,
+`var(--nom)` et un mot-clé comme `red` ou `currentcolor`. Toute autre écriture
+est refusée : une couleur donnée par l'application hôte ne doit pas pouvoir
+faire charger un fichier distant.
+
+La couleur n'est jamais écrite dans le dessin. Le graphique la pose sur son
+conteneur, dans `--rdc-custom-0`, `--rdc-custom-1`, et les parts portent
+`fill="var(--rdc-custom-0)"`. La couleur de survol vient d'un
+`filter: brightness()` en CSS, jamais de chroma-js à l'exécution : `0,78` pour
+le camembert et les barres, `1,155` pour la courbe, les deux facteurs les plus
+proches du `darken(0.8)` et du `brighten(0.5)` de la version amont.
 
 ## Taille
 
@@ -120,11 +145,11 @@ Mesures `size-limit` (esbuild, minifié et gzippé, `react` externe) :
 
 | Ce qui est chargé           | Taille    |
 | --------------------------- | --------- |
-| `PieChart`                  | 3,56 ko   |
-| `BarChart`                  | 6,80 ko   |
-| `LineChart`                 | 5,82 ko   |
-| Les trois ensemble          | 9,27 ko   |
-| Feuille de style            | 1,82 ko   |
+| `PieChart`                  | 3,88 ko   |
+| `BarChart`                  | 7,20 ko   |
+| `LineChart`                 | 6,27 ko   |
+| Les trois ensemble          | 9,89 ko   |
+| Feuille de style            | 2,04 ko   |
 | Dépendances d'exécution     | 0         |
 
 Les trois ensemble pèsent moins que deux pris séparément : le cœur commun
@@ -155,6 +180,10 @@ boîtes de mise en page. Ce portage ne la reproduit pas : l'angle peut être plu
 raide de 3 degrés, la zone de tracé se décaler de 4 pixels, et l'axe des
 valeurs porter moins de graduations. Sans rotation, la zone de tracé est
 identique au pixel près.
+
+**Couleurs choisies.** La propriété `colors` n'existe pas en amont pour ces
+trois graphiques : sa branche `tmpColorParse` est du code mort. Voir « La
+propriété `colors` » plus haut.
 
 **Rendu serveur.** Le premier rendu produit le cadre et le tableau de données.
 Le dessin arrive après le montage, quand la largeur est mesurée.
@@ -214,10 +243,6 @@ paquet disparaît.
   (`layouts.update` et `fitBoxes`).
 - **Une valeur écrite sur chaque barre**, à la manière du `LabelList` de
   Recharts. Absent de la version amont, mais souvent demandé.
-- **Une propriété `colors`.** La version amont n'en expose pas pour ces trois
-  graphiques. Si elle arrive, la couleur de survol doit venir d'un
-  `filter: brightness()` en CSS, jamais de chroma-js à l'exécution : c'est la
-  seule manière de garder zéro dépendance et un changement de thème gratuit.
 - **Des tests d'accessibilité automatisés** sur les trois graphiques.
 
 ## Développement

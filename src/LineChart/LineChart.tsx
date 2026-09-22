@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Axes } from '../core/Axes.js';
 import { ChartFrame } from '../core/ChartFrame.js';
+import { customColorSet, withCustomColors, type CustomColors } from '../core/customColors.js';
 import { DataTable } from '../core/DataTable.js';
 import { formatNumber } from '../core/format.js';
 import { choosePalette } from '../core/palette.js';
@@ -29,6 +30,11 @@ export interface LineChartProps {
   yMin?: number;
   yMax?: number;
   selectedPalette?: Palette;
+  /**
+   * One CSS colour per series, which replaces the palette where it is given.
+   * An entry that is absent or unreadable keeps its palette colour.
+   */
+  colors?: CustomColors;
   /** The unit that follows the value in the tooltip. */
   unitTooltip?: string;
   /** The date of the last update, shown under the legend. */
@@ -58,6 +64,7 @@ export function LineChart({
   yMin,
   yMax,
   selectedPalette,
+  colors,
   unitTooltip,
   date,
   aspectRatio = 2,
@@ -77,13 +84,17 @@ export function LineChart({
     return numbers.every((value) => Number.isFinite(value)) && String(Number(x[0])) === String(x[0]).trim() ? numbers : undefined;
   }, [x]);
 
-  const { colors, hovers } = useMemo(() => {
+  const custom = useMemo(() => customColorSet(colors), [colors]);
+  const { lineColors, hovers } = useMemo(() => {
     // `loadColors` of the upstream line chart: one colour per series, by index,
     // and a brightened variant on hover where the other charts darken.
     const palette = choosePalette(selectedPalette);
     const names = y.map((_, index) => palette[index % palette.length]);
-    return { colors: names.map((token) => `var(${token})`), hovers: names.map((token) => `var(${token}-br)`) };
-  }, [y, selectedPalette]);
+    return {
+      lineColors: names.map((token, index) => custom.refs[index] ?? `var(${token})`),
+      hovers: names.map((token) => `var(${token}-br)`),
+    };
+  }, [y, selectedPalette, custom]);
 
   const geometry = useMemo(() => {
     const fitted = plot({
@@ -118,12 +129,12 @@ export function LineChart({
     // `fonts` is not read: it redraws once the real font is measurable.
   }, [width, height, labels, y, indexValues, fill, xMin, xMax, yMin, yMax, fonts]);
 
-  const legend = useMemo(() => y.map((_, index) => ({ label: name?.[index] ?? `Série ${index + 1}`, color: colors[index] ?? 'var(--rdc-neutral)' })), [y, name, colors]);
+  const legend = useMemo(() => y.map((_, index) => ({ label: name?.[index] ?? `Série ${index + 1}`, color: lineColors[index] ?? 'var(--rdc-neutral)' })), [y, name, lineColors]);
 
   const tooltip: TooltipState | null = useMemo(() => {
     if (active === null || !geometry) return null;
     const rows = y
-      .map((values, s) => ({ color: colors[s] ?? 'var(--rdc-neutral)', value: `${formatNumber(values[active])}${unitTooltip ? ` ${unitTooltip}` : ''}`, raw: values[active] }))
+      .map((values, s) => ({ color: lineColors[s] ?? 'var(--rdc-neutral)', value: `${formatNumber(values[active])}${unitTooltip ? ` ${unitTooltip}` : ''}`, raw: values[active] }))
       .filter((row) => Number.isFinite(row.raw))
       .map(({ color, value }) => ({ color, value }));
     if (!rows.length) return null;
@@ -135,13 +146,13 @@ export function LineChart({
       x: anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length,
       y: anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length,
     };
-  }, [active, geometry, y, colors, labels, unitTooltip]);
+  }, [active, geometry, y, lineColors, labels, unitTooltip]);
 
   return (
     <ChartFrame
       id={id}
       className={className}
-      style={style}
+      style={withCustomColors(style, custom)}
       chartRef={ref}
       width={width}
       height={height}
@@ -168,8 +179,8 @@ export function LineChart({
             grid="horizontal"
           />
 
-          {geometry.areas.map((path, s) => (path ? <path key={`a${s}`} className="rdc-area" d={path} fill={colors[s]} /> : null))}
-          {geometry.lines.map((path, s) => (path ? <path key={`l${s}`} className="rdc-line" d={path} stroke={colors[s]} /> : null))}
+          {geometry.areas.map((path, s) => (path ? <path key={`a${s}`} className="rdc-area" d={path} fill={lineColors[s]} /> : null))}
+          {geometry.lines.map((path, s) => (path ? <path key={`l${s}`} className="rdc-line" d={path} stroke={lineColors[s]} /> : null))}
 
           {/* The `afterDraw` plugin of src/components/LineChart.vue: one dashed line down the category, and one across the plot at the value of every series. */}
           {active !== null ? (
@@ -184,20 +195,25 @@ export function LineChart({
           ) : null}
 
           {geometry.points.map((set, s) =>
-            set.map((point, index) => (
-              <circle
-                key={`${s}-${index}`}
-                className="rdc-point"
-                cx={point.x}
-                cy={point.y}
-                r={POINT_RADIUS}
-                fill={active === index ? (hovers[s] ?? colors[s]) : colors[s]}
-                tabIndex={0}
-                onMouseEnter={() => setActive(index)}
-                onFocus={() => setActive(index)}
-                onBlur={() => setActive(null)}
-              />
-            )),
+            set.map((point, index) => {
+              // A custom colour has no second token, so its hover state is a
+              // CSS filter. A palette colour keeps the brightened token upstream uses.
+              const tinted = active === index && Boolean(custom.refs[s]);
+              return (
+                <circle
+                  key={`${s}-${index}`}
+                  className={`rdc-point${tinted ? ' rdc-hover--brighten' : ''}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r={POINT_RADIUS}
+                  fill={active === index && !tinted ? (hovers[s] ?? lineColors[s]) : lineColors[s]}
+                  tabIndex={0}
+                  onMouseEnter={() => setActive(index)}
+                  onFocus={() => setActive(index)}
+                  onBlur={() => setActive(null)}
+                />
+              );
+            }),
           )}
         </svg>
       ) : null}

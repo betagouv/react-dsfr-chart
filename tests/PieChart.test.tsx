@@ -116,6 +116,47 @@ describe('PieChart', () => {
     unmount();
     expect(observers[before].disconnected).toBe(true);
   });
+
+  it('paints a slice with the colour the colors prop gives', () => {
+    const { container } = render(<PieChart x={X} y={Y} colors={['#ff0000', 'var(--mine)', 'rebeccapurple']} />);
+    expect(paths(container).map((path) => path.getAttribute('fill'))).toEqual([
+      'var(--rdc-custom-0)',
+      'var(--rdc-custom-1)',
+      'var(--rdc-custom-2)',
+    ]);
+    const wrapper = container.querySelector('.rdc') as HTMLElement;
+    expect(wrapper.style.getPropertyValue('--rdc-custom-0')).toBe('#ff0000');
+    expect(wrapper.style.getPropertyValue('--rdc-custom-2')).toBe('rebeccapurple');
+  });
+
+  it('keeps the palette for a slice the colors prop leaves out or writes badly', () => {
+    const plain = render(<PieChart x={X} y={Y} />);
+    const custom = render(<PieChart x={X} y={Y} colors={[undefined, 'url(https://example.com/x.png)', '#00ff00']} />);
+    const palette = paths(plain.container).map((path) => path.getAttribute('fill'));
+    expect(paths(custom.container).map((path) => path.getAttribute('fill'))).toEqual([palette[0], palette[1], 'var(--rdc-custom-2)']);
+  });
+
+  it('colours the legend and the tooltip like the slice', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<PieChart x={X} y={Y} colors={['#ff0000']} />);
+    const dot = container.querySelector('.legend_dot') as HTMLElement;
+    expect(dot.style.backgroundColor).toBe('var(--rdc-custom-0)');
+    await user.hover(paths(container)[0]);
+    const tooltipDot = container.querySelector('.tooltip_dot') as HTMLElement;
+    expect(tooltipDot.style.backgroundColor).toBe('var(--rdc-custom-0)');
+  });
+
+  it('darkens a custom slice on hover with a filter, and keeps its colour', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<PieChart x={X} y={Y} colors={['#ff0000']} />);
+    const [first, second] = paths(container);
+    await user.hover(first);
+    expect(first).toHaveClass('rdc-hover--darken');
+    expect(first.getAttribute('fill')).toBe('var(--rdc-custom-0)');
+    await user.hover(second);
+    expect(first).not.toHaveClass('rdc-hover--darken');
+    expect(second).not.toHaveClass('rdc-hover--darken');
+  });
 });
 
 describe('PieChart with a second level', () => {
@@ -139,6 +180,17 @@ describe('PieChart with a second level', () => {
     await user.click(screen.getByRole('button', { name: 'Retour' }));
     expect(paths(container)).toHaveLength(3);
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Série 1', 'Série 2', 'Série 3']);
+  });
+
+  it('gives the second level the palette, never the colors prop', async () => {
+    const user = userEvent.setup();
+    const plain = render(<PieChart x={X} y={Y} subX={subX} subY={subY} />);
+    const custom = render(<PieChart x={X} y={Y} subX={subX} subY={subY} colors={['#ff0000', '#00ff00']} />);
+    await user.click(paths(plain.container)[0]);
+    await user.click(paths(custom.container)[0]);
+    expect(paths(custom.container).map((path) => path.getAttribute('fill'))).toEqual(
+      paths(plain.container).map((path) => path.getAttribute('fill')),
+    );
   });
 
   it('opens the second level with the keyboard', async () => {

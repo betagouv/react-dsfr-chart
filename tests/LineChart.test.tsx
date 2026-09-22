@@ -171,4 +171,30 @@ describe('LineChart', () => {
     unmount();
     expect(observers[before].disconnected).toBe(true);
   });
+
+  it('paints a series with the colour the colors prop gives', () => {
+    const { container } = render(<LineChart x={X} y={[Y[0], [10, 20, 30, 40]]} fill colors={['#ff0000', 'var(--mine)']} />);
+    expect(lines(container).map((line) => line.getAttribute('stroke'))).toEqual(['var(--rdc-custom-0)', 'var(--rdc-custom-1)']);
+    expect(areas(container).map((area) => area.getAttribute('fill'))).toEqual(['var(--rdc-custom-0)', 'var(--rdc-custom-1)']);
+    const wrapper = container.querySelector('.rdc') as HTMLElement;
+    expect(wrapper.style.getPropertyValue('--rdc-custom-1')).toBe('var(--mine)');
+  });
+
+  it('keeps the palette for a series the colors prop leaves out or writes badly', () => {
+    const plain = render(<LineChart x={X} y={[Y[0], [10, 20, 30, 40]]} />);
+    const custom = render(<LineChart x={X} y={[Y[0], [10, 20, 30, 40]]} colors={['url(https://example.com/x.png)', '#00ff00']} />);
+    const palette = lines(plain.container).map((line) => line.getAttribute('stroke'));
+    expect(lines(custom.container).map((line) => line.getAttribute('stroke'))).toEqual([palette[0], 'var(--rdc-custom-1)']);
+  });
+
+  it('brightens a custom point on hover with a filter, and keeps its colour', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<LineChart x={X} y={Y} colors={['#ff0000']} />);
+    const first = points(container)[0];
+    await user.hover(first);
+    expect(first).toHaveClass('rdc-hover--brighten');
+    expect(first.getAttribute('fill')).toBe('var(--rdc-custom-0)');
+    const dot = container.querySelector('.legend_dot') as HTMLElement;
+    expect(dot.style.backgroundColor).toBe('var(--rdc-custom-0)');
+  });
 });

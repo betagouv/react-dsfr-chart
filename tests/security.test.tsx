@@ -15,6 +15,8 @@ import { PieChart } from '../src/PieChart/index.js';
  */
 
 const PAYLOAD = '<img src=x onerror="alert(1)">';
+/** A colour that would fetch a remote file if the chart wrote it as it stands. */
+const COLOUR_PAYLOAD = 'url(https://example.com/pixel.png)';
 const X = [`Salariés ${PAYLOAD}`, 'Non-salariés', 'Apprentis'];
 const Y = [74.8, 11.7, 13.5];
 
@@ -64,12 +66,40 @@ describe('injection through the props', () => {
   });
 
   it('fills every slice with a colour the stylesheet names', () => {
-    // The fill of a slice comes from the palette, never from a prop. A future
-    // custom-colour prop would have to pass this test, which refuses anything
-    // but a variable of the stylesheet.
+    // The fill of a slice comes from the palette or from a custom property the
+    // chart writes itself, never from the value of a prop. This test refuses
+    // anything but a variable of the stylesheet.
     const { container } = render(<PieChart x={X} y={Y} />);
     for (const path of Array.from(container.querySelectorAll('path'))) {
       expect(path.getAttribute('fill')).toMatch(/^(var\(--rdc-[\w-]+\)|color-mix\([^<>]*\))$/);
+    }
+  });
+
+  it('keeps a colour of the colors prop out of every attribute the drawing carries', () => {
+    const { container } = render(<PieChart x={X} y={Y} colors={[COLOUR_PAYLOAD, '#ff0000']} />);
+    // The first colour is refused, so it reaches neither a custom property nor
+    // a fill. The second one reaches a custom property only.
+    expect(container.innerHTML).not.toContain('example.com');
+    for (const path of Array.from(container.querySelectorAll('path'))) {
+      expect(path.getAttribute('fill')).toMatch(/^var\(--rdc-[\w-]+\)$/);
+    }
+    const wrapper = container.querySelector('.rdc') as HTMLElement;
+    expect(wrapper.style.getPropertyValue('--rdc-custom-0')).toBe('');
+    expect(wrapper.style.getPropertyValue('--rdc-custom-1')).toBe('#ff0000');
+  });
+
+  it('refuses a colour of the colors prop on the bar chart and the line chart', () => {
+    const bar = render(<BarChart x={X} y={[Y]} colors={[COLOUR_PAYLOAD]} />);
+    const line = render(<LineChart x={X} y={[Y]} fill colors={[COLOUR_PAYLOAD]} />);
+    for (const { container } of [bar, line]) {
+      expect(container.innerHTML).not.toContain('example.com');
+      expect(container.querySelector('[src]')).toBeNull();
+    }
+    for (const rect of Array.from(bar.container.querySelectorAll('rect.rdc-bar'))) {
+      expect(rect.getAttribute('fill')).toMatch(/^(var\(--rdc-[\w-]+\)|color-mix\([^<>]*\))$/);
+    }
+    for (const path of Array.from(line.container.querySelectorAll('path.rdc-line'))) {
+      expect(path.getAttribute('stroke')).toMatch(/^var\(--rdc-[\w-]+\)$/);
     }
   });
 });
