@@ -1,14 +1,18 @@
 /**
- * Cuts a release candidate: bumps the version, commits, tags and pushes.
+ * Cuts a release candidate: bumps the version, tags it, and opens the pull
+ * request that carries the bump back to the default branch.
  *
  * A tag `v*` triggers .github/workflows/release.yml, which runs every check
  * and attaches the tarball to a GitHub Release. A tag that carries a
  * pre-release suffix stops there; publish.yml ignores it, so nothing reaches
- * npm. This script therefore only guards what a tag cannot undo once pushed:
- * a dirty tree, a stale branch, and a number already taken.
+ * npm. The checks of the package are therefore the job of the workflow, not
+ * of this script.
  *
- * The checks of the package (typecheck, test, size, check:package) are the
- * job of the workflow, not of this script.
+ * The default branch is protected: a commit reaches it through a pull request
+ * only. So the bump commit goes to its own branch, and the branch and the tag
+ * are pushed in one atomic push — either both arrive or neither does. The
+ * release starts as soon as the tag lands; the default branch catches up when
+ * the pull request is merged.
  *
  * Run: npm run publish-rc 0.1.1 [--dry-run]
  */
@@ -45,7 +49,7 @@ if (!/^\d+\.\d+\.\d+$/.test(base)) {
   fail(`"${positional[0]}" is not a plain version. Pass the target release, without a suffix: 0.1.1`);
 }
 
-// 1. The tree must hold nothing the tag would leave behind.
+// 1. The tree must hold nothing the tag would carry by accident.
 let branch;
 try {
   branch = run('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -65,6 +69,21 @@ try {
 }
 
 const remote = upstream.split('/')[0];
+
+/** The branch the pull request targets. */
+let defaultBranch = 'main';
+try {
+  defaultBranch = run('git', ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`]).slice(remote.length + 1);
+} catch {
+  // No origin/HEAD reference. main is the branch every workflow of this
+  // repository names, so it stays the answer.
+}
+
+// The pull request holds the difference between the branch and the default
+// branch. Starting from anywhere else would put unrelated work inside it.
+if (branch !== defaultBranch) {
+  fail(`Run this from ${defaultBranch}, not from ${branch}. The pull request would carry the work of ${branch} too.`);
+}
 
 // 2. The remote holds the tags that decide the next number.
 console.log(`Fetching ${remote}…`);
@@ -93,6 +112,14 @@ const numbers = tags
   .filter((value) => Number.isInteger(value) && value > 0);
 const next = `${base}-rc.${Math.max(0, ...numbers) + 1}`;
 const tag = `v${next}`;
+const releaseBranch = `chore/version-${next}`;
+
+let hasGh = true;
+try {
+  run('gh', ['auth', 'status']);
+} catch {
+  hasGh = false;
+}
 
 // 4. The plan, then the confirmation. A pushed tag runs a workflow.
 const current = run('node', ['-p', 'require("./package.json").version']);
@@ -101,9 +128,10 @@ console.log('');
 console.log('About to release:');
 console.log(`  version  ${current} -> ${next}`);
 console.log(`  tag      ${tag}`);
-console.log(`  branch   ${branch} -> ${upstream}`);
-if (branch !== 'main') {
-  console.log(`\n  Note: ${branch} is not main.`);
+console.log(`  branch   ${releaseBranch} -> ${remote}`);
+console.log(`  pull request  ${releaseBranch} -> ${defaultBranch}`);
+if (!hasGh) {
+  console.log(`\n  Note: gh is absent or not signed in. The script prints the command of the pull request instead.`);
 }
 console.log('');
 
@@ -131,20 +159,58 @@ if (answer.trim().toLowerCase() !== 'y') {
   process.exit(0);
 }
 
-// 5. npm writes both package.json and package-lock.json, then commits and
-// makes an annotated tag, which --follow-tags needs.
 console.log('');
-runLive('npm', ['version', next, '--message', 'chore: version %s']);
+
+// 5. The bump lives on its own branch. npm writes both package.json and
+// package-lock.json, commits, and makes an annotated tag.
+runLive('git', ['switch', '--quiet', '--create', releaseBranch]);
 
 try {
-  runLive('git', ['push', '--follow-tags', remote, `HEAD:${upstream.slice(remote.length + 1)}`]);
+  runLive('npm', ['version', next, '--message', 'chore: version %s']);
 } catch {
-  fail(
-    `The push failed. The commit and the tag stay local. To undo them:\n` +
-      `    git tag -d ${tag} && git reset --hard HEAD~1`,
-  );
+  runLive('git', ['switch', '--quiet', branch]);
+  runLive('git', ['branch', '--quiet', '--delete', releaseBranch]);
+  fail('npm version failed. Nothing was pushed.');
+}
+
+/** Undoes everything this script made on the machine. */
+function undoLocally() {
+  runLive('git', ['switch', '--quiet', '--force', branch]);
+  runLive('git', ['branch', '--quiet', '--delete', '--force', releaseBranch]);
+  runLive('git', ['tag', '--delete', tag]);
+}
+
+// 6. One atomic push: the remote takes the branch and the tag together, or it
+// takes nothing. A tag without its branch would release a commit that no pull
+// request can carry back.
+try {
+  runLive('git', ['push', '--atomic', remote, `${releaseBranch}:${releaseBranch}`, `refs/tags/${tag}`]);
+} catch {
+  undoLocally();
+  fail('The push failed. Nothing reached the remote, and the branch and the tag are removed here.');
+}
+
+// The release is under way. From here a failure costs a command, never the
+// release, so the script reports and keeps going.
+runLive('git', ['branch', '--quiet', `--set-upstream-to=${remote}/${releaseBranch}`, releaseBranch]);
+runLive('git', ['switch', '--quiet', branch]);
+
+const title = `chore: version ${next}`;
+const body = `La release ${tag} est déjà en ligne. Cette pull request ramène la version sur ${defaultBranch}.`;
+
+if (hasGh) {
+  try {
+    runLive('gh', ['pr', 'create', '--base', defaultBranch, '--head', releaseBranch, '--title', title, '--body', body]);
+  } catch {
+    console.error('\n  The pull request was not created. Open it by hand:');
+    console.error(`    gh pr create --base ${defaultBranch} --head ${releaseBranch} --title "${title}" --fill\n`);
+  }
+} else {
+  console.log('Open the pull request:');
+  console.log(`  gh pr create --base ${defaultBranch} --head ${releaseBranch} --title "${title}" --fill`);
 }
 
 console.log('');
 console.log(`Released ${tag}. The release workflow now runs the checks and attaches the tarball:`);
 console.log('  https://github.com/betagouv/react-dsfr-chart/actions');
+console.log(`Merge the pull request to bring version ${next} onto ${defaultBranch}.`);

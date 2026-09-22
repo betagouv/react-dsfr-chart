@@ -63,7 +63,7 @@ WORLD lookup tables.
 | `npm run demo`      | the side-by-side page, port 5175                      |
 | `npm run check:package` | the published tarball: no runtime dep, nothing outside `dist/` |
 | `npm run hooks:install` | the pre-commit secret scan (needs `gitleaks`)     |
-| `npm run publish-rc <version>` | bumps to the next `-rc.N`, commits, tags and pushes |
+| `npm run publish-rc <version>` | the next `-rc.N`: branch, tag, atomic push, pull request |
 
 ## Hard Rules (non-negotiable)
 
@@ -339,7 +339,9 @@ tag with the version of `package.json`, then runs `npm publish --provenance`.
 (`v0.1.0-rc.1`). Same checks, then `npm pack` and a GitHub Release that carries
 the tarball. A consumer installs from that URL; `dist/` never enters the
 repository, and there is no `prepare` script because a git dependency would
-need the consumer to run install scripts.
+need the consumer to run install scripts. `npm run publish-rc` makes that tag:
+the default branch is protected, so the bump commit goes to its own branch and
+a pull request brings it back, while the tag starts the release at once.
 
 ## Security
 
