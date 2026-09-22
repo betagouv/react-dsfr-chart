@@ -63,6 +63,7 @@ WORLD lookup tables.
 | `npm run demo`      | the side-by-side page, port 5175                      |
 | `npm run check:package` | the published tarball: no runtime dep, nothing outside `dist/` |
 | `npm run hooks:install` | the pre-commit secret scan (needs `gitleaks`)     |
+| `npm run publish-rc <version>` | bumps to the next `-rc.N`, commits, tags and pushes |
 
 ## Hard Rules (non-negotiable)
 
