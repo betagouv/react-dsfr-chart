@@ -40,6 +40,8 @@ export interface LineChartProps {
   /** The date of the last update, shown under the legend. */
   date?: string;
   aspectRatio?: number;
+  /** The height in pixels. It holds whatever the width, and replaces `aspectRatio`. */
+  height?: number;
   ariaLabel?: string;
   id?: string;
   className?: string;
@@ -68,12 +70,13 @@ export function LineChart({
   unitTooltip,
   date,
   aspectRatio = 2,
+  height: fixedHeight,
   ariaLabel = DEFAULT_ARIA_LABEL,
   id,
   className,
   style,
 }: LineChartProps) {
-  const { ref, width, height, fonts } = useSize<HTMLDivElement>(aspectRatio);
+  const { ref, width, height, fonts } = useSize<HTMLDivElement>(aspectRatio, fixedHeight);
   const [active, setActive] = useState<number | null>(null);
 
   const labels = useMemo(() => x.map((label) => String(label)), [x]);

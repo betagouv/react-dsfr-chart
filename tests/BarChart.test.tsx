@@ -26,6 +26,39 @@ describe('BarChart', () => {
     expect(bars(container)).toHaveLength(3);
   });
 
+  it('holds the height that `height` gives, whatever the width', () => {
+    const { container } = render(<BarChart x={X} y={Y} height={250} />);
+    const svg = container.querySelector('svg')!;
+    expect(svg).toHaveAttribute('width', '800');
+    expect(svg).toHaveAttribute('height', '250');
+  });
+
+  it('takes the height of a horizontal chart from the number of categories', () => {
+    const { container } = render(<BarChart x={X} y={Y} horizontal categorySize={40} />);
+    expect(container.querySelector('svg')).toHaveAttribute('height', '120');
+
+    const six = render(<BarChart x={[...X, '2030', '2040', '2050']} y={[[1, 2, 3, 4, 5, 6]]} horizontal categorySize={40} />);
+    expect(six.container.querySelector('svg')).toHaveAttribute('height', '240');
+  });
+
+  it('gives the second level of a horizontal chart the height of its own categories', () => {
+    const { container } = render(
+      <BarChart x={X} y={Y} subX={[['A', 'B'], [], []]} subY={[[1, 2], [], []]} horizontal categorySize={40} />,
+    );
+    fireEvent.click(bars(container)[0]);
+    expect(container.querySelector('svg')).toHaveAttribute('height', '80');
+  });
+
+  it('ignores `categorySize` on a vertical chart, whose categories follow the width', () => {
+    const { container } = render(<BarChart x={X} y={Y} categorySize={40} />);
+    expect(container.querySelector('svg')).toHaveAttribute('height', '400');
+  });
+
+  it('gives `height` precedence over `categorySize`', () => {
+    const { container } = render(<BarChart x={X} y={Y} horizontal categorySize={40} height={300} />);
+    expect(container.querySelector('svg')).toHaveAttribute('height', '300');
+  });
+
   it('draws one bar per value of every series', () => {
     const { container } = render(<BarChart x={X} y={[[1, 2, 3], [4, 5, 6]]} />);
     expect(bars(container)).toHaveLength(6);

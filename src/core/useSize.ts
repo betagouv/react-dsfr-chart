@@ -12,8 +12,11 @@ export interface Size {
  * The chart is drawn at its measured size, not scaled through a `viewBox`, so
  * that the text keeps the size the DSFR gives it. The width is `0` until the
  * component mounts, which makes the first render safe on a server.
+ *
+ * `fixedHeight` holds the height still, whatever the width: the caller then
+ * owns the shape of the drawing and `aspectRatio` is not read.
  */
-export function useSize<T extends HTMLElement>(aspectRatio: number): { ref: React.RefObject<T | null>; width: number; height: number; fonts: boolean } {
+export function useSize<T extends HTMLElement>(aspectRatio: number, fixedHeight?: number): { ref: React.RefObject<T | null>; width: number; height: number; fonts: boolean } {
   const ref = useRef<T>(null);
   const [width, setWidth] = useState(0);
   const [fonts, setFonts] = useState(false);
@@ -46,5 +49,6 @@ export function useSize<T extends HTMLElement>(aspectRatio: number): { ref: Reac
     return () => observer.disconnect();
   }, []);
 
-  return { ref, width, height: aspectRatio > 0 ? width / aspectRatio : 0, fonts };
+  const height = fixedHeight !== undefined && fixedHeight > 0 ? fixedHeight : aspectRatio > 0 ? width / aspectRatio : 0;
+  return { ref, width, height, fonts };
 }

@@ -17,6 +17,13 @@ describe('PieChart', () => {
     expect(paths(container)).toHaveLength(3);
   });
 
+  it('holds the height that `height` gives, whatever the width', () => {
+    const { container } = render(<PieChart x={X} y={Y} height={250} />);
+    const svg = container.querySelector('svg')!;
+    expect(svg).toHaveAttribute('width', '800');
+    expect(svg).toHaveAttribute('height', '250');
+  });
+
   it('labels the drawing for a screen reader', () => {
     render(<PieChart x={X} y={Y} />);
     expect(screen.getByRole('img', { name: 'Diagramme circulaire' })).toBeInTheDocument();

@@ -33,6 +33,8 @@ export interface PieChartProps {
   /** The date of the last update, shown under the legend. */
   date?: string;
   aspectRatio?: number;
+  /** The height in pixels. It holds whatever the width, and replaces `aspectRatio`. */
+  height?: number;
   ariaLabel?: string;
   id?: string;
   className?: string;
@@ -55,12 +57,13 @@ export function PieChart({
   unitTooltip,
   date,
   aspectRatio = 2,
+  height: fixedHeight,
   ariaLabel = DEFAULT_ARIA_LABEL,
   id,
   className,
   style,
 }: PieChartProps) {
-  const { ref, width, height } = useSize<HTMLDivElement>(aspectRatio);
+  const { ref, width, height } = useSize<HTMLDivElement>(aspectRatio, fixedHeight);
   const [level, setLevel] = useState<number | null>(null);
   const [active, setActive] = useState<number | null>(null);
 

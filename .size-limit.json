@@ -20,7 +20,7 @@
       "react-dom",
       "react/jsx-runtime"
     ],
-    "limit": "7.25 kB",
+    "limit": "7.3 kB",
     "gzip": true
   },
   {
@@ -44,7 +44,7 @@
       "react-dom",
       "react/jsx-runtime"
     ],
-    "limit": "9.95 kB",
+    "limit": "10 kB",
     "gzip": true
   },
   {

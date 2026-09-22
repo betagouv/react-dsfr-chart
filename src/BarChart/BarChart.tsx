@@ -49,6 +49,15 @@ export interface BarChartProps {
   /** The date of the last update, shown under the legend. */
   date?: string;
   aspectRatio?: number;
+  /** The height in pixels. It holds whatever the width, and replaces `aspectRatio`. */
+  height?: number;
+  /**
+   * The height in pixels one category takes, axes included. The height of the
+   * chart then follows the number of categories, not the width. A vertical
+   * chart ignores it: its categories run along the width, which the container
+   * gives. `height` wins over it.
+   */
+  categorySize?: number;
   ariaLabel?: string;
   id?: string;
   className?: string;
@@ -79,17 +88,23 @@ export function BarChart({
   unitTooltip,
   date,
   aspectRatio = 2,
+  height: fixedHeight,
+  categorySize,
   ariaLabel = DEFAULT_ARIA_LABEL,
   id,
   className,
   style,
 }: BarChartProps) {
-  const { ref, width, height, fonts } = useSize<HTMLDivElement>(aspectRatio);
   const [level, setLevel] = useState<number | null>(null);
   const [active, setActive] = useState<number | null>(null);
 
   const hasSubChart = Boolean(subX && subY);
   const labels = useMemo(() => (level === null ? x : (subX?.[level] ?? x)), [level, x, subX]);
+  // `categorySize` measures the index axis, which runs down the height of a
+  // horizontal chart only: a vertical chart lays its categories along the
+  // width, which the container gives.
+  const rowsHeight = horizontal && categorySize !== undefined && categorySize > 0 ? labels.length * categorySize : undefined;
+  const { ref, width, height, fonts } = useSize<HTMLDivElement>(aspectRatio, fixedHeight ?? rowsHeight);
   // A second level replaces the data of the first series only, as upstream does.
   // Memoised because a fresh array on every render would redraw the whole chart.
   const series = useMemo(() => (level === null ? y : [subY?.[level] ?? []]), [level, y, subY]);

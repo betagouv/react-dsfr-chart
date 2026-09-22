@@ -77,6 +77,7 @@ caractères, souvent du JSON. Ici, chaque propriété a son type réel.
 | `unit-tooltip`     | `unitTooltip`      |                                                   |
 | `date`             | `date`             |                                                   |
 | `aspect-ratio`     | `aspectRatio`      | Défaut : `2`.                                     |
+| —                  | `height: number`   | Une hauteur fixe, en pixels. Remplace `aspectRatio`. |
 | —                  | `ariaLabel`        | Défaut : `Diagramme circulaire`.                  |
 | —                  | `id`               |                                                   |
 | —                  | `className`        |                                                   |
@@ -97,6 +98,7 @@ caractères, souvent du JSON. Ici, chaque propriété a son type réel.
 | `highlight-index`  | `highlightIndex`      | Avec la palette `neutral`.                       |
 | `x-min` · `x-max`  | `xMin` · `xMax`       | Une borne que l’axe englobe.                     |
 | `y-min` · `y-max`  | `yMin` · `yMax`       |                                                  |
+| —                  | `categorySize`        | La hauteur d’une catégorie, en pixels. Graphique horizontal seulement. |
 
 ### `<LineChart>`
 
@@ -113,8 +115,25 @@ caractères, souvent du JSON. Ici, chaque propriété a son type réel.
 la version amont les signale comme non documentés et non destinés à l’usage.
 
 Les trois graphiques acceptent aussi `selectedPalette`, `colors`,
-`unitTooltip`, `date`, `aspectRatio`, `ariaLabel`, `id`, `className` et
-`style`.
+`unitTooltip`, `date`, `aspectRatio`, `height`, `ariaLabel`, `id`, `className`
+et `style`.
+
+### La hauteur
+
+Par défaut la hauteur suit la largeur, divisée par `aspectRatio`. `height` la
+fixe en pixels, quelle que soit la largeur.
+
+Un graphique en barres horizontal a une troisième option : `categorySize`
+donne la hauteur d’une catégorie, axes compris, et la hauteur du graphique
+suit alors le nombre de catégories.
+
+```tsx
+<BarChart x={regions} y={[valeurs]} horizontal categorySize={40} />
+```
+
+`height` l’emporte sur `categorySize`, qui l’emporte sur `aspectRatio`. Un
+graphique vertical ignore `categorySize` : ses catégories se suivent sur la
+largeur, que le conteneur donne.
 
 ### La propriété `colors`
 
