@@ -1,6 +1,6 @@
 {
   "name": "react-dsfr-chart",
-  "version": "0.1.1-rc.1",
+  "version": "0.1.2-rc.1",
   "description": "Composants React de visualisation graphique pour le Système de Design de l'État (DSFR) — SVG pur, zéro dépendance runtime",
   "license": "MIT",
   "type": "module",
