@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { PieChart, type Palette } from '../src/index.js';
-import { doughnut, drilldown, pie } from './data.js';
+import { BarChart, LineChart, PieChart, type Palette } from '../src/index.js';
+import { barHorizontal, barSequential, barStacked, barUnicolor, barVertical, doughnut, drilldown, lineDefault, lineMultiple, pie } from './data.js';
 
 type Theme = 'light' | 'dark';
 
@@ -107,6 +107,62 @@ export function App() {
             selected-palette={palette}
           />
         }
+      />
+      <Case
+        title="Barres verticales"
+        ours={<BarChart {...barVertical} selectedPalette={palette || barVertical.selectedPalette} />}
+        theirs={<bar-chart x={JSON.stringify([barVertical.x])} y={JSON.stringify(barVertical.y)} name={JSON.stringify(barVertical.name)} unit-tooltip={barVertical.unitTooltip} selected-palette={palette || barVertical.selectedPalette} />}
+      />
+
+      <Case
+        title="Barres avec mise en avant"
+        ours={<BarChart {...barUnicolor} selectedPalette={palette || barUnicolor.selectedPalette} />}
+        theirs={
+          <bar-chart
+            x={JSON.stringify([barUnicolor.x])}
+            y={JSON.stringify(barUnicolor.y)}
+            name={JSON.stringify(barUnicolor.name)}
+            unit-tooltip={barUnicolor.unitTooltip}
+            selected-palette={palette || barUnicolor.selectedPalette}
+            highlight-index={JSON.stringify(barUnicolor.highlightIndex)}
+          />
+        }
+      />
+
+      <Case
+        title="Barres, palette séquentielle et étiquettes longues"
+        ours={<BarChart {...barSequential} selectedPalette={palette || barSequential.selectedPalette} />}
+        theirs={<bar-chart x={JSON.stringify([barSequential.x])} y={JSON.stringify(barSequential.y)} name={JSON.stringify(barSequential.name)} unit-tooltip={barSequential.unitTooltip} selected-palette={palette || barSequential.selectedPalette} />}
+      />
+
+      <Case
+        title="Barres horizontales"
+        ours={<BarChart {...barHorizontal} selectedPalette={palette || undefined} />}
+        theirs={<bar-chart x={JSON.stringify([barHorizontal.x])} y={JSON.stringify(barHorizontal.y)} name={JSON.stringify(barHorizontal.name)} unit-tooltip={barHorizontal.unitTooltip} horizontal="true" bar-size="20" selected-palette={palette} />}
+      />
+
+      <Case
+        title="Barres empilées"
+        ours={<BarChart {...barStacked} selectedPalette={palette || undefined} />}
+        theirs={<bar-chart x={JSON.stringify([barStacked.x])} y={JSON.stringify(barStacked.y)} name={JSON.stringify(barStacked.name)} unit-tooltip={barStacked.unitTooltip} stacked="true" selected-palette={palette} />}
+      />
+
+      <Case
+        title="Ligne"
+        ours={<LineChart {...lineDefault} selectedPalette={palette || lineDefault.selectedPalette} />}
+        theirs={<line-chart x={JSON.stringify([lineDefault.x])} y={JSON.stringify(lineDefault.y)} name={JSON.stringify(lineDefault.name)} unit-tooltip={lineDefault.unitTooltip} selected-palette={palette || lineDefault.selectedPalette} />}
+      />
+
+      <Case
+        title="Lignes multiples"
+        ours={<LineChart {...lineMultiple} selectedPalette={palette || undefined} />}
+        theirs={<line-chart x={JSON.stringify([lineMultiple.x, lineMultiple.x])} y={JSON.stringify(lineMultiple.y)} name={JSON.stringify(lineMultiple.name)} unit-tooltip={lineMultiple.unitTooltip} selected-palette={palette} />}
+      />
+
+      <Case
+        title="Aire (extension absente de la version amont)"
+        ours={<LineChart {...lineDefault} fill selectedPalette={palette || lineDefault.selectedPalette} />}
+        theirs={<p className="fr-text--sm">La version amont n’a pas d’option d’aire.</p>}
       />
     </main>
   );

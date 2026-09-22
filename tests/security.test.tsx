@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { BarChart } from '../src/BarChart/index.js';
+import { LineChart } from '../src/LineChart/index.js';
 import { PieChart } from '../src/PieChart/index.js';
 
 /**
@@ -68,6 +70,60 @@ describe('injection through the props', () => {
     const { container } = render(<PieChart x={X} y={Y} />);
     for (const path of Array.from(container.querySelectorAll('path'))) {
       expect(path.getAttribute('fill')).toMatch(/^(var\(--rdc-[\w-]+\)|color-mix\([^<>]*\))$/);
+    }
+  });
+});
+
+describe('injection through the props of the bar chart and the line chart', () => {
+  it('keeps a category label out of the markup of the axis', () => {
+    const { container } = render(<BarChart x={X} y={[Y]} />);
+    const labels = Array.from(container.querySelectorAll('text.rdc-tick')).map((node) => node.textContent);
+    expect(labels).toContain(X[0]);
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('keeps a name, a unit and a date out of the markup of a bar chart', () => {
+    const { container } = render(<BarChart x={X} y={[Y]} name={[PAYLOAD]} unitTooltip={PAYLOAD} date={PAYLOAD} />);
+    fireEvent.focus(container.querySelector('rect.rdc-bar')!);
+    expect(container).toHaveTextContent(PAYLOAD);
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('keeps a second level label of a bar chart out of the markup', () => {
+    const { container } = render(<BarChart x={X} y={[Y]} subX={[[PAYLOAD, 'B'], [], []]} subY={[[1, 2], [], []]} />);
+    fireEvent.click(container.querySelector('rect.rdc-bar')!);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByRole('columnheader', { name: PAYLOAD })).toBeInTheDocument();
+  });
+
+  it('keeps a label and a name out of the markup of a line chart', () => {
+    const { container } = render(<LineChart x={X} y={[Y]} name={[PAYLOAD]} unitTooltip={PAYLOAD} date={PAYLOAD} />);
+    fireEvent.focus(container.querySelector('circle.rdc-point')!);
+    expect(container).toHaveTextContent(PAYLOAD);
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('paints every bar, line and point with a colour the stylesheet names', () => {
+    const colour = /^(var\(--rdc-[\w-]+\)|color-mix\([^<>]*\))$/;
+    const bar = render(<BarChart x={X} y={[Y]} />);
+    for (const rect of Array.from(bar.container.querySelectorAll('rect.rdc-bar'))) {
+      expect(rect.getAttribute('fill')).toMatch(colour);
+    }
+    const line = render(<LineChart x={X} y={[Y]} fill />);
+    for (const path of Array.from(line.container.querySelectorAll('path.rdc-line'))) {
+      expect(path.getAttribute('stroke')).toMatch(colour);
+    }
+    for (const point of Array.from(line.container.querySelectorAll('circle.rdc-point'))) {
+      expect(point.getAttribute('fill')).toMatch(colour);
+    }
+  });
+
+  it('never builds an attribute out of a prop', () => {
+    const bar = render(<BarChart x={X} y={[Y]} ariaLabel={PAYLOAD} />);
+    const line = render(<LineChart x={X} y={[Y]} ariaLabel={`${PAYLOAD} ligne`} />);
+    for (const { container } of [bar, line]) {
+      expect(container.querySelector('[src]')).toBeNull();
+      expect(container.querySelector('[href]')).toBeNull();
     }
   });
 });

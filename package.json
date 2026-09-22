@@ -20,6 +20,14 @@
       "types": "./dist/PieChart/index.d.ts",
       "import": "./dist/PieChart/index.js"
     },
+    "./BarChart": {
+      "types": "./dist/BarChart/index.d.ts",
+      "import": "./dist/BarChart/index.js"
+    },
+    "./LineChart": {
+      "types": "./dist/LineChart/index.d.ts",
+      "import": "./dist/LineChart/index.js"
+    },
     "./css": {
       "types": "./dist/styles/chart.css.d.ts",
       "default": "./dist/styles/chart.css"

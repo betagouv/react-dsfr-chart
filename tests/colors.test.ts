@@ -32,11 +32,12 @@ describe('the generated colours match chroma-js', () => {
   const scaleOnly = ['09', '10', '11', '12', '13', '14', '15'];
 
   for (const theme of THEMES) {
-    it(`carries the ten named tokens of the "${theme}" theme and their hover variant`, () => {
+    it(`carries the ten named tokens of the "${theme}" theme and their two hover variants`, () => {
       for (const name of names) {
         const hex = token(theme, name);
         expect(generated[theme][`--rdc-${name}`]).toBe(hex);
         expect(generated[theme][`--rdc-${name}-dk`]).toBe(chroma(hex).darken(0.8).hex());
+        expect(generated[theme][`--rdc-${name}-br`]).toBe(chroma(hex).brighten(0.5).hex());
       }
     });
 
@@ -51,6 +52,7 @@ describe('the generated colours match chroma-js', () => {
       stops.forEach((hex, i) => {
         expect(generated[theme][`--rdc-seq-${i}`]).toBe(hex);
         expect(generated[theme][`--rdc-seq-${i}-dk`]).toBe(chroma(hex).darken(0.8).hex());
+        expect(generated[theme][`--rdc-seq-${i}-br`]).toBe(chroma(hex).brighten(0.5).hex());
       });
     });
 
@@ -59,6 +61,7 @@ describe('the generated colours match chroma-js', () => {
       stops.forEach((hex, i) => {
         expect(generated[theme][`--rdc-div-${i}`]).toBe(hex);
         expect(generated[theme][`--rdc-div-${i}-dk`]).toBe(chroma(hex).darken(0.8).hex());
+        expect(generated[theme][`--rdc-div-${i}-br`]).toBe(chroma(hex).brighten(0.5).hex());
       });
     });
 

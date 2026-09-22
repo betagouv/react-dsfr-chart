@@ -121,6 +121,72 @@
   border-bottom: none;
 }
 
+/* Axes. The upstream takes #6b6b6b for its text and #cecece for its lines,
+ * and swaps the text for #cecece in the dark theme. */
+
+:root {
+  --rdc-axis-text: #6b6b6b;
+  --rdc-axis-line: #cecece;
+}
+
+[data-fr-theme='dark'] {
+  --rdc-axis-text: #cecece;
+}
+
+.rdc .rdc-grid,
+.rdc .rdc-axis {
+  stroke: var(--rdc-axis-line);
+  stroke-width: 1;
+}
+
+.rdc .rdc-grid {
+  stroke-dasharray: 3;
+}
+
+.rdc .rdc-tick {
+  fill: var(--rdc-axis-text);
+  font-size: 12px;
+}
+
+.rdc .rdc-bar {
+  transition: fill 0.15s ease-out;
+}
+
+.rdc .rdc-bar--clickable {
+  cursor: pointer;
+}
+
+.rdc .rdc-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.rdc .rdc-area {
+  stroke: none;
+  opacity: 0.2;
+}
+
+.rdc .rdc-point {
+  transition: fill 0.15s ease-out;
+}
+
+/* The line a line chart draws under the pointer, through the active value. */
+.rdc .rdc-crosshair {
+  stroke: var(--rdc-axis-line);
+  stroke-width: 1;
+  stroke-dasharray: 10 5;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rdc .rdc-bar,
+  .rdc .rdc-point {
+    transition: none;
+  }
+}
+
 /* Drawing */
 
 .rdc svg {

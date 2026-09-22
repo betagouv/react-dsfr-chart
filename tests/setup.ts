@@ -1,4 +1,10 @@
 import '@testing-library/jest-dom/vitest';
+import { stubCanvas } from './chartjs-canvas.js';
+
+// The charts measure their tick labels with a canvas, which jsdom does not
+// implement. The same stub serves the components and the Chart.js oracle, so
+// both measure a label the same way.
+stubCanvas();
 
 /** jsdom implements no ResizeObserver. The charts only need the callback. */
 class TestResizeObserver implements ResizeObserver {
