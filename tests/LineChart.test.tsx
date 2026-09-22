@@ -22,6 +22,13 @@ describe('LineChart', () => {
     expect(lines(container)).toHaveLength(2);
   });
 
+  it('holds the height that `height` gives, whatever the width', () => {
+    const { container } = render(<LineChart x={X} y={[[1, 2, 3, 4]]} height={250} />);
+    const svg = container.querySelector('svg')!;
+    expect(svg).toHaveAttribute('width', '800');
+    expect(svg).toHaveAttribute('height', '250');
+  });
+
   it('draws one point per value', () => {
     const { container } = render(<LineChart x={X} y={Y} />);
     expect(points(container)).toHaveLength(4);
