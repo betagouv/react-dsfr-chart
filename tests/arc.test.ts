@@ -120,6 +120,13 @@ describe('arcPath', () => {
     expect(path.match(/M /g)).toHaveLength(1);
   });
 
+  it('draws a single slice as a full circle despite rounding', () => {
+    // TAU * 22 / 22 is one ulp under TAU: the slice used to collapse into a radius.
+    const [slice] = arcs([22]);
+    expect(arcPath({ ...box, innerRadius: 0 }, slice)).not.toContain('L ');
+    expect(arcPath(box, slice).match(/A /g)).toHaveLength(4);
+  });
+
   it('sets the large-arc flag beyond a half turn', () => {
     expect(arcPath(box, { startAngle: 0, endAngle: Math.PI * 1.5 })).toContain('0 1 1');
     expect(arcPath(box, { startAngle: 0, endAngle: Math.PI * 0.5 })).toContain('0 0 1');

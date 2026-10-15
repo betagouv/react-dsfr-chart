@@ -78,7 +78,9 @@ export function arcPath({ cx, cy, innerRadius, outerRadius }: Ring, { startAngle
   if (sweep <= 0) return '';
 
   // A single SVG arc command cannot span a full turn: split it in two.
-  if (sweep >= TAU) {
+  // `arcs()` computes the sweep as `TAU * value / total`, which rounding can
+  // leave a hair under TAU (22 / 22 does): compare with a tolerance.
+  if (sweep >= TAU - 1e-9) {
     const half = startAngle + Math.PI;
     const outer = `M ${point(cx, cy, outerRadius, startAngle)} A ${outerRadius} ${outerRadius} 0 0 1 ${point(cx, cy, outerRadius, half)} A ${outerRadius} ${outerRadius} 0 0 1 ${point(cx, cy, outerRadius, startAngle)} Z`;
     if (innerRadius <= 0) return outer;
